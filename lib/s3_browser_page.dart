@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:minio/minio.dart' as minio;
 import 'package:minio/io.dart';
@@ -1263,6 +1264,89 @@ class _PreviewDialogState extends State<_PreviewDialog> {
     }
   }
 
+  String _getFileUrl() {
+    // If CDN URL is configured, use it
+    if (widget.serverConfig.cdnUrl != null && widget.serverConfig.cdnUrl!.isNotEmpty) {
+      // Remove trailing slash from CDN URL if present
+      String cdnUrl = widget.serverConfig.cdnUrl!;
+      if (cdnUrl.endsWith('/')) {
+        cdnUrl = cdnUrl.substring(0, cdnUrl.length - 1);
+      }
+      // Build the full URL
+      return '$cdnUrl/${widget.object.key}';
+    } else {
+      // Otherwise, use the S3 address to build the URL
+      String baseUrl = widget.serverConfig.address;
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+      }
+      return '$baseUrl/${widget.object.key}';
+    }
+  }
+
+  void _copyToClipboard(String text, String message) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showCopyMenu() {
+    // Get the button's position using a GlobalKey
+    final RenderBox? button = context.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+
+    // Calculate position relative to the overlay
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: [
+        const PopupMenuItem<String>(
+          value: 'url',
+          child: ListTile(
+            leading: Icon(Icons.link),
+            title: Text('Copy URL'),
+            dense: true,
+          ),
+        ),
+        if (widget.isImage) ...[
+          const PopupMenuItem<String>(
+            value: 'markdown',
+            child: ListTile(
+              leading: Icon(Icons.image),
+              title: Text('Copy Markdown'),
+              dense: true,
+            ),
+          ),
+        ],
+      ],
+    ).then((String? value) {
+      if (value == null) return;
+
+      final url = _getFileUrl();
+
+      switch (value) {
+        case 'url':
+          _copyToClipboard(url, 'URL copied to clipboard');
+          break;
+        case 'markdown':
+          final markdown = '![${widget.object.key.split('/').last}]($url)';
+          _copyToClipboard(markdown, 'Markdown copied to clipboard');
+          break;
+      }
+    });
+  }
+
   Future<void> _handleDownload() async {
     setState(() {
       _isDownloading = true;
@@ -1365,6 +1449,12 @@ class _PreviewDialogState extends State<_PreviewDialog> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Close'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _showCopyMenu,
+                  icon: const Icon(Icons.content_copy),
+                  label: const Text('Copy'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(

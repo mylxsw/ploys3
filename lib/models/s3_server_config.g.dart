@@ -15,6 +15,7 @@ S3ServerConfig _$S3ServerConfigFromJson(Map<String, dynamic> json) =>
       accessKeyId: json['accessKeyId'] as String,
       secretAccessKey: json['secretAccessKey'] as String,
       region: json['region'] as String?,
+      cdnUrl: json['cdnUrl'] as String?,
     );
 
 Map<String, dynamic> _$S3ServerConfigToJson(S3ServerConfig instance) =>
@@ -26,4 +27,5 @@ Map<String, dynamic> _$S3ServerConfigToJson(S3ServerConfig instance) =>
       'accessKeyId': instance.accessKeyId,
       'secretAccessKey': instance.secretAccessKey,
       'region': instance.region,
+      'cdnUrl': instance.cdnUrl,
     };

@@ -19,6 +19,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _bucketController = TextEditingController();
   final TextEditingController _accessKeyIdController = TextEditingController();
+  final TextEditingController _cdnUrlController = TextEditingController();
   final TextEditingController _secretAccessKeyController = TextEditingController();
   final TextEditingController _regionController = TextEditingController();
 
@@ -37,6 +38,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           accessKeyId: _accessKeyIdController.text,
           secretAccessKey: _secretAccessKeyController.text,
           region: _regionController.text.isNotEmpty ? _regionController.text : null,
+          cdnUrl: _cdnUrlController.text.isNotEmpty ? _cdnUrlController.text : null,
         );
 
         // Find and replace the existing config
@@ -58,6 +60,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           accessKeyId: _accessKeyIdController.text,
           secretAccessKey: _secretAccessKeyController.text,
           region: _regionController.text.isNotEmpty ? _regionController.text : null,
+          cdnUrl: _cdnUrlController.text.isNotEmpty ? _cdnUrlController.text : null,
         );
 
         serverConfigs.add(json.encode(newConfig.toJson()));
@@ -82,6 +85,9 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
       _secretAccessKeyController.text = widget.existingConfig!.secretAccessKey;
       if (widget.existingConfig!.region != null) {
         _regionController.text = widget.existingConfig!.region!;
+      }
+      if (widget.existingConfig!.cdnUrl != null) {
+        _cdnUrlController.text = widget.existingConfig!.cdnUrl!;
       }
     }
   }
@@ -121,6 +127,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                     _buildTextFormField('Access Key ID', _accessKeyIdController, 'your-access-key-id'),
                     _buildTextFormField('Secret Access Key', _secretAccessKeyController, 'your-secret-access-key', obscureText: true),
                     _buildTextFormField('Region (optional)', _regionController, 'auto (for R2) or us-east-1'),
+                    _buildTextFormField('CDN URL (optional)', _cdnUrlController, 'https://cdn.example.com'),
                   ],
                 ),
               ),

@@ -11,6 +11,7 @@ class S3ServerConfig {
   final String accessKeyId;
   final String secretAccessKey;
   final String? region;
+  final String? cdnUrl;
 
   S3ServerConfig({
     required this.id,
@@ -20,6 +21,7 @@ class S3ServerConfig {
     required this.accessKeyId,
     required this.secretAccessKey,
     this.region,
+    this.cdnUrl,
   });
 
   factory S3ServerConfig.fromJson(Map<String, dynamic> json) => _$S3ServerConfigFromJson(json);

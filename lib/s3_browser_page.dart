@@ -863,6 +863,35 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
+                        // Home button to return to root
+                        if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
+                          TextButton.icon(
+                            onPressed: () {
+                              // Clear prefix history and go to root
+                              setState(() {
+                                _prefixHistory.clear();
+                                _currentPrefix = '';
+                                _objects = [];
+                                _isLoading = true;
+                              });
+                              _listObjects(prefix: '');
+                            },
+                            icon: const Icon(Icons.home, size: 16),
+                            label: const Text('Home'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                          ),
+                        if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty) const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
+                            style: const TextStyle(color: Colors.white70),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // Back button moved to the right
                         if (_prefixHistory.isNotEmpty)
                           TextButton.icon(
                             onPressed: _goBack,
@@ -873,14 +902,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             ),
                           ),
-                        if (_prefixHistory.isNotEmpty && _currentPrefix.isNotEmpty) const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
-                            style: const TextStyle(color: Colors.white70),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
                       ],
                     ),
                   ),

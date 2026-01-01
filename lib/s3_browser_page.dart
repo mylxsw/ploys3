@@ -68,6 +68,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   String _currentPrefix = '';
   List<String> _prefixHistory = [];
 
+  // Cache storage for file listings
+  final Map<String, List<S3Item>> _cache = {};
+  bool _isRefreshing = false;
+
   @override
   void initState() {
     super.initState();
@@ -134,21 +138,35 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   }
 
   Future<void> _listObjects({String? prefix}) async {
-    setState(() {
-      _isLoading = true;
-    });
+    final effectivePrefix = prefix ?? _currentPrefix;
+    final cacheKey = '${widget.serverConfig.id}:${widget.serverConfig.bucket}:$effectivePrefix';
+
+    // Check if we have cached data
+    if (_cache.containsKey(cacheKey) && !_isRefreshing) {
+      setState(() {
+        _objects = _cache[cacheKey]!;
+        _isLoading = false;
+      });
+      debugPrint('Loaded from cache for prefix: $effectivePrefix');
+    } else if (!_isRefreshing) {
+      // No cache, show loading
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    // Always fetch fresh data in the background
+    _isRefreshing = true;
 
     try {
       // Debug information
       debugPrint('Listing objects from bucket: ${widget.serverConfig.bucket}');
       debugPrint('Using endpoint: ${widget.serverConfig.address}');
-      if (prefix != null) {
-        debugPrint('Using prefix: $prefix');
-      }
+      debugPrint('Using prefix: $effectivePrefix');
 
       final stream = _minio.listObjects(
         widget.serverConfig.bucket,
-        prefix: prefix ?? _currentPrefix,
+        prefix: effectivePrefix,
       );
       final results = await stream.toList();
 
@@ -176,50 +194,68 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       items.addAll(directories);
       items.addAll(files);
 
-      setState(() {
-        _objects = items;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Update cache
+      _cache[cacheKey] = List.from(items);
 
-      // More detailed error message
-      String errorMessage = 'Error listing objects: $e';
-      String detailedError = e.toString();
-
-      debugPrint('=== S3 List Error ===');
-      debugPrint('Error Type: ${e.runtimeType}');
-      debugPrint('Error Message: $e');
-      debugPrint('Full Error: $detailedError');
-      debugPrint('====================');
-
-      if (detailedError.contains('Connection failed')) {
-        errorMessage = 'Connection failed. Please check:\n'
-            '1. Your network connection\n'
-            '2. The endpoint URL is correct\n'
-            '3. Your access credentials are valid\n'
-            '4. For R2: Ensure the bucket exists and is accessible\n\n'
-            'Technical details: ${e.toString().substring(0, 100)}...';
-      } else if (detailedError.contains('AccessDenied')) {
-        errorMessage = 'Access Denied. Please check:\n'
-            '1. Your access key and secret are correct\n'
-            '2. The bucket exists\n'
-            '3. You have list permissions on the bucket';
-      } else if (detailedError.contains('NoSuchBucket')) {
-        errorMessage = 'Bucket not found. Please check:\n'
-            '1. The bucket name is spelled correctly\n'
-            '2. The bucket exists in your account';
+      // Update UI if we're still on the same page
+      if (mounted) {
+        setState(() {
+          _objects = items;
+          _isLoading = false;
+          _isRefreshing = false;
+        });
+        debugPrint('Updated with fresh data for prefix: $effectivePrefix');
       }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          duration: const Duration(seconds: 8),
-        ),
-      );
+        // More detailed error message
+        String errorMessage = 'Error listing objects: $e';
+        String detailedError = e.toString();
+
+        debugPrint('=== S3 List Error ===');
+        debugPrint('Error Type: ${e.runtimeType}');
+        debugPrint('Error Message: $e');
+        debugPrint('Full Error: $detailedError');
+        debugPrint('====================');
+
+        if (detailedError.contains('Connection failed')) {
+          errorMessage = 'Connection failed. Please check:\n'
+              '1. Your network connection\n'
+              '2. The endpoint URL is correct\n'
+              '3. Your access credentials are valid\n'
+              '4. For R2: Ensure the bucket exists and is accessible\n\n'
+              'Technical details: ${e.toString().substring(0, 100)}...';
+        } else if (detailedError.contains('AccessDenied')) {
+          errorMessage = 'Access Denied. Please check:\n'
+              '1. Your access key and secret are correct\n'
+              '2. The bucket exists\n'
+              '3. You have list permissions on the bucket';
+        } else if (detailedError.contains('NoSuchBucket')) {
+          errorMessage = 'Bucket not found. Please check:\n'
+              '1. The bucket name is spelled correctly\n'
+              '2. The bucket exists in your account';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
     }
+  }
+
+  void _clearCache() {
+    // Clear all cached data for this bucket
+    final prefix = '${widget.serverConfig.id}:${widget.serverConfig.bucket}:';
+    _cache.removeWhere((key, value) => key.startsWith(prefix));
+    debugPrint('Cleared cache for bucket: ${widget.serverConfig.bucket}');
   }
 
   void _showUploadProgressDialog(String fileName) {
@@ -390,6 +426,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         if (mounted) {
           Navigator.pop(context); // Close progress dialog
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted $key')));
+          // Clear cache and refresh
+          _clearCache();
           _listObjects();
         }
       } catch (e) {
@@ -616,6 +654,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Uploaded $fileName')),
           );
+          // Clear cache and refresh to show the new file
+          _clearCache();
           _listObjects(prefix: _currentPrefix);
         }
       } else {
@@ -673,8 +713,17 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
           // Refresh button
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : () => _listObjects(prefix: _currentPrefix),
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isLoading || _isRefreshing ? null : () {
+              _clearCache();
+              _listObjects(prefix: _currentPrefix);
+            },
             tooltip: 'Refresh',
           ),
         ],
@@ -713,7 +762,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
           // Objects list/grid
           Expanded(
-            child: _isLoading
+            child: _isLoading && !_isRefreshing
                 ? const Center(child: CircularProgressIndicator())
                 : _objects.isEmpty
                     ? Center(
@@ -753,7 +802,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             color: object.isDirectory ? Colors.amber : Colors.white70,
           ),
           title: Text(
-            object.key.substring(_currentPrefix.length),
+            object.key.startsWith(_currentPrefix)
+              ? object.key.substring(_currentPrefix.length)
+              : object.key,
             style: const TextStyle(color: Colors.white),
           ),
           subtitle: object.isDirectory
@@ -835,7 +886,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    object.key.substring(_currentPrefix.length),
+                    object.key.startsWith(_currentPrefix)
+                      ? object.key.substring(_currentPrefix.length)
+                      : object.key,
                     style: const TextStyle(color: Colors.white, fontSize: 12),
                     textAlign: TextAlign.center,
                     maxLines: 2,

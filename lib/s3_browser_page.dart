@@ -9,6 +9,7 @@ import 'package:minio/models.dart';
 import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/r2_connection_helper.dart';
 import 'package:s3_ui/download_manager.dart';
+import 'package:s3_ui/widgets/loading_overlay.dart';
 
 /// Represents an S3 object or directory prefix
 class S3Item {
@@ -152,20 +153,32 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final cacheKey =
         '${widget.serverConfig.id}:${widget.serverConfig.bucket}:$effectivePrefix';
 
+    // If we're already on a different prefix, don't update UI for old requests
+    if (effectivePrefix != _currentPrefix) {
+      debugPrint(
+        'Ignoring list request for $effectivePrefix (current: $_currentPrefix)',
+      );
+      return;
+    }
+
     // Check if we have cached data and we're not already refreshing
     if (_cache.containsKey(cacheKey) &&
         !_isRefreshing &&
         _currentPrefix == effectivePrefix) {
-      setState(() {
-        _objects = _cache[cacheKey]!;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _objects = _cache[cacheKey]!;
+          _isLoading = false;
+        });
+      }
       debugPrint('Loaded from cache for prefix: $effectivePrefix');
     } else if (!_isRefreshing) {
       // No cache or different prefix, show loading
-      setState(() {
-        _isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
     }
 
     // Always fetch fresh data in the background
@@ -211,16 +224,21 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       _cache[cacheKey] = List.from(items);
 
       // Update UI if we're still on the same page
-      if (mounted) {
+      if (mounted && _currentPrefix == effectivePrefix) {
         setState(() {
           _objects = items;
           _isLoading = false;
           _isRefreshing = false;
         });
         debugPrint('Updated with fresh data for prefix: $effectivePrefix');
+      } else {
+        debugPrint(
+          'Discarding result for $effectivePrefix (current: $_currentPrefix)',
+        );
+        _isRefreshing = false;
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && _currentPrefix == effectivePrefix) {
         setState(() {
           _isLoading = false;
           _isRefreshing = false;
@@ -672,18 +690,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
   }
 
-  void _goBack() {
-    if (_prefixHistory.isNotEmpty) {
-      setState(() {
-        _currentPrefix = _prefixHistory.removeLast();
-        // Clear current objects to prevent showing stale data
-        _objects = [];
-        _isLoading = true;
-      });
-      _listObjects(prefix: _currentPrefix);
-    }
-  }
-
   // File preview method
   void _showFilePreview(S3Item object) async {
     if (object.isDirectory) {
@@ -990,7 +996,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                         // Home button to return to root
                         if (_currentPrefix.isNotEmpty ||
                             _prefixHistory.isNotEmpty)
-                          TextButton.icon(
+                          IconButton(
                             onPressed: () {
                               // Clear prefix history and go to root
                               setState(() {
@@ -1001,16 +1007,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                               });
                               _listObjects(prefix: '');
                             },
-                            icon: const Icon(Icons.home, size: 16),
-                            label: const Text('Home'),
-                            style: TextButton.styleFrom(
+                            icon: const Icon(Icons.home),
+                            tooltip: 'Home',
+                            style: IconButton.styleFrom(
                               foregroundColor: Theme.of(
                                 context,
                               ).colorScheme.onSurface,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
                             ),
                           ),
                         if ((_prefixHistory.isNotEmpty ||
@@ -1018,26 +1020,137 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                             _currentPrefix.isNotEmpty)
                           const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                if (_currentPrefix.isEmpty)
+                                  Text(
+                                    'Root',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  )
+                                else ...[
+                                  // Split prefix into parts and create clickable breadcrumbs
+                                  ..._currentPrefix
+                                      .split('/')
+                                      .where((part) => part.isNotEmpty)
+                                      .toList()
+                                      .asMap()
+                                      .entries
+                                      .map((entry) {
+                                        final index = entry.key;
+                                        final part = entry.value;
+                                        final isLast =
+                                            index ==
+                                            _currentPrefix
+                                                    .split('/')
+                                                    .where((p) => p.isNotEmpty)
+                                                    .length -
+                                                1;
+
+                                        // Reconstruct path for this segment
+                                        final pathParts = _currentPrefix
+                                            .split('/')
+                                            .where((p) => p.isNotEmpty)
+                                            .toList()
+                                            .sublist(0, index + 1);
+                                        final path = '${pathParts.join('/')}/';
+
+                                        return Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (index > 0)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                    ),
+                                                child: Icon(
+                                                  Icons.chevron_right,
+                                                  size: 16,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.5),
+                                                ),
+                                              ),
+                                            InkWell(
+                                              onTap: isLast
+                                                  ? null
+                                                  : () {
+                                                      _navigateToDirectory(
+                                                        path,
+                                                      );
+                                                    },
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 4,
+                                                      vertical: 2,
+                                                    ),
+                                                child: Text(
+                                                  part,
+                                                  style: isLast
+                                                      ? Theme.of(context)
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            )
+                                                      : Theme.of(context)
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.copyWith(
+                                                              color:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .colorScheme
+                                                                      .primary,
+                                                              decoration:
+                                                                  TextDecoration
+                                                                      .underline,
+                                                            ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        // Back button moved to the right
-                        if (_prefixHistory.isNotEmpty)
-                          TextButton.icon(
-                            onPressed: _goBack,
-                            icon: const Icon(Icons.arrow_back, size: 16),
-                            label: const Text('Back'),
-                            style: TextButton.styleFrom(
+                        // Back button (up to parent)
+                        if (_currentPrefix.isNotEmpty)
+                          IconButton(
+                            onPressed: () {
+                              // Navigate to parent directory
+                              final parts = _currentPrefix
+                                  .split('/')
+                                  .where((p) => p.isNotEmpty)
+                                  .toList();
+                              if (parts.isNotEmpty) {
+                                parts.removeLast();
+                                final parentPath = parts.isEmpty
+                                    ? ''
+                                    : '${parts.join('/')}/';
+                                _navigateToDirectory(parentPath);
+                              }
+                            },
+                            icon: const Icon(Icons.arrow_upward),
+                            tooltip: 'Up to parent',
+                            style: IconButton.styleFrom(
                               foregroundColor: Theme.of(
                                 context,
                               ).colorScheme.onSurface,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
                             ),
                           ),
                       ],
@@ -1046,41 +1159,47 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
                 // Objects list/grid
                 Expanded(
-                  child: _isLoading && !_isRefreshing
-                      ? const Center(child: CircularProgressIndicator())
-                      : _objects.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _currentPrefix.isEmpty
-                                    ? Icons.cloud_off
-                                    : Icons.folder_open,
-                                size: 64,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.2),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _currentPrefix.isEmpty
-                                    ? 'No objects in bucket'
-                                    : 'No objects in this directory',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.5),
-                                    ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _isGridView
-                      ? _buildGridView()
-                      : _buildListView(),
+                  child: LoadingOverlay(
+                    isLoading: _isLoading || _isRefreshing,
+                    child: _objects.isEmpty
+                        ? ((_isLoading || _isRefreshing)
+                              ? const SizedBox.shrink()
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _currentPrefix.isEmpty
+                                            ? Icons.cloud_off
+                                            : Icons.folder_open,
+                                        size: 64,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.2),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _currentPrefix.isEmpty
+                                            ? 'No objects in bucket'
+                                            : 'No objects in this directory',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.5),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ))
+                        : _isGridView
+                        ? _buildGridView()
+                        : _buildListView(),
+                  ),
                 ),
               ],
             ),
@@ -1495,10 +1614,10 @@ class _PreviewDialogState extends State<_PreviewDialog> {
             // Preview area
             Expanded(
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Preview/Image area
-                  Expanded(flex: 2, child: _buildPreviewContent()),
+                  Expanded(flex: 1, child: _buildPreviewContent()),
                   const SizedBox(width: 16),
                   // File details
                   Expanded(flex: 1, child: _buildFileDetails(dateFormat)),
@@ -1658,35 +1777,37 @@ class _PreviewDialogState extends State<_PreviewDialog> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'File Information',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          _buildDetailRow('Name', widget.object.key),
-          if (widget.object.size != null) ...[
-            const SizedBox(height: 8),
-            _buildDetailRow('Size', _formatBytes(widget.object.size!, 2)),
-          ],
-          if (widget.object.lastModified != null) ...[
-            const SizedBox(height: 8),
-            _buildDetailRow(
-              'Modified',
-              dateFormat.format(widget.object.lastModified!),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'File Information',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ],
-          if (widget.object.eTag != null) ...[
+            const SizedBox(height: 16),
+            _buildDetailRow('Name', widget.object.key),
+            if (widget.object.size != null) ...[
+              const SizedBox(height: 8),
+              _buildDetailRow('Size', _formatBytes(widget.object.size!, 2)),
+            ],
+            if (widget.object.lastModified != null) ...[
+              const SizedBox(height: 8),
+              _buildDetailRow(
+                'Modified',
+                dateFormat.format(widget.object.lastModified!),
+              ),
+            ],
+            if (widget.object.eTag != null) ...[
+              const SizedBox(height: 8),
+              _buildDetailRow('ETag', widget.object.eTag!),
+            ],
             const SizedBox(height: 8),
-            _buildDetailRow('ETag', widget.object.eTag!),
+            _buildDetailRow('Type', widget.isImage ? 'Image' : 'File'),
           ],
-          const SizedBox(height: 8),
-          _buildDetailRow('Type', widget.isImage ? 'Image' : 'File'),
-        ],
+        ),
       ),
     );
   }

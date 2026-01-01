@@ -1,50 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/s3_config_page.dart';
 import 'package:s3_ui/s3_browser_page.dart';
-import 'package:s3_ui/r2_test_page.dart';
+import 'package:s3_ui/settings_page.dart';
+import 'package:s3_ui/core/design_system.dart';
+import 'package:s3_ui/core/theme_manager.dart';
+import 'package:s3_ui/core/language_manager.dart';
+import 'package:s3_ui/core/localization.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 设置系统UI样式
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  runApp(const App());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// 主应用
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'S3 UI',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: const Color(0xFF1F1F1F),
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        cardColor: const Color(0xFF1E1E1E),
-        dividerColor: Colors.grey[800],
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white70),
-          titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          titleMedium: TextStyle(color: Colors.white70),
-        ),
-      ),
-      home: const MyHomePage(title: 'S3 UI'),
-      debugShowCheckedModeBanner: false,
+    return AnimatedBuilder(
+      animation: ThemeManager.instance,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'S3 Manager',
+          theme: ThemeManager.instance.currentTheme,
+          debugShowCheckedModeBanner: false,
+          home: const LanguageProvider(
+            child: ThemeProvider(
+              child: AppShell(),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+/// 应用外壳
+class AppShell extends StatefulWidget {
+  const AppShell({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AppShell> createState() => _AppShellState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _AppShellState extends State<AppShell> {
   List<S3ServerConfig> _serverConfigs = [];
   S3ServerConfig? _selectedServerConfig;
 
@@ -64,160 +79,223 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _editServer(S3ServerConfig server) async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => S3ConfigPage(
-          onSave: _loadConfigs,
-          existingConfig: server,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _testConnection(S3ServerConfig server) async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => R2TestPage(serverConfig: server),
-      ),
-    );
-  }
-
-  Future<void> _deleteServer(S3ServerConfig server) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Server'),
-        content: Text('Are you sure you want to delete "${server.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
-
-      // Remove the server from the list
-      serverConfigsStrings.removeWhere((configString) {
-        final config = S3ServerConfig.fromJson(json.decode(configString));
-        return config.id == server.id;
-      });
-
-      await prefs.setStringList('server_configs', serverConfigsStrings);
-
-      // If the deleted server was selected, clear the selection
-      if (_selectedServerConfig?.id == server.id) {
-        setState(() {
-          _selectedServerConfig = null;
-        });
-      }
-
-      _loadConfigs();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Row(
         children: [
-          Container(
-            width: 250,
-            color: const Color(0xFF1E1E1E),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
-                  child: Text(
-                    'S3 Servers',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.add, color: Colors.white70),
-                  title: const Text('Add S3 Server'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => S3ConfigPage(onSave: _loadConfigs),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _serverConfigs.length,
-                    itemBuilder: (context, index) {
-                      final server = _serverConfigs[index];
-                      return ListTile(
-                        leading: const Icon(Icons.cloud_queue_outlined, color: Colors.white70),
-                        title: Text(server.name),
-                        selected: _selectedServerConfig?.id == server.id,
-                        selectedTileColor: Colors.grey[800],
-                        onTap: () {
-                          setState(() {
-                            _selectedServerConfig = server;
-                          });
-                        },
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _editServer(server);
-                            } else if (value == 'delete') {
-                              _deleteServer(server);
-                            } else if (value == 'test') {
-                              _testConnection(server);
-                            }
-                          },
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
-                              value: 'test',
-                              child: Text('Test Connection'),
-                            ),
-                            const PopupMenuItem<String>(
-                              value: 'edit',
-                              child: Text('Edit'),
-                            ),
-                            const PopupMenuItem<String>(
-                              value: 'delete',
-                              child: Text('Delete'),
-                            ),
-                          ],
+          // 左侧导航栏
+          NavigationRail(
+            extended: true,
+            minExtendedWidth: 280,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 2,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  // Logo
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.secondary,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
+                        child: const Icon(
+                          Icons.cloud_outlined,
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'S3',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          Text(
+                            'MANAGER',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              letterSpacing: 2,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 32),
+                  // 添加服务器按钮
+                  SizedBox(
+                    width: 200,
+                    child: AppComponents.primaryButton(
+                      text: context.loc('add_new_server'),
+                      icon: Icons.add,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => S3ConfigPage(onSave: _loadConfigs),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const VerticalDivider(width: 1, thickness: 1),
-          Expanded(
-            child: _selectedServerConfig != null
-                ? S3BrowserPage(serverConfig: _selectedServerConfig!)
-                : Container(
-                    color: const Color(0xFF252526),
-                    child: Center(
-                      child: Text(
-                        'Select a server to view its content',
-                        style: Theme.of(context).textTheme.titleMedium,
+            destinations: [
+              // 服务器列表
+              ..._serverConfigs.map((server) {
+                final isSelected = _selectedServerConfig?.id == server.id;
+                return NavigationRailDestination(
+                  icon: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: null, // Handled by NavigationRail
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.cloud_outlined,
+                          size: 24,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
                     ),
                   ),
+                  selectedIcon: Material(
+                    color: Colors.transparent,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.cloud_done,
+                        size: 24,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  label: Text(
+                    server.name,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                );
+              }),
+            ],
+            trailing: Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 设置按钮
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                context.loc('settings'),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedServerConfig = _serverConfigs[index];
+              });
+            },
+            selectedIndex: _selectedServerConfig != null && _serverConfigs.isNotEmpty
+                ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id)
+                : null,
+          ),
+
+          // 右侧内容区域
+          Expanded(
+            child: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: _selectedServerConfig != null
+                  ? S3BrowserPage(serverConfig: _selectedServerConfig!)
+                  : AppComponents.emptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: context.loc('no_server_selected'),
+                      subtitle: context.loc('select_server_to_start'),
+                      onAction: _serverConfigs.isEmpty
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => S3ConfigPage(onSave: _loadConfigs),
+                                ),
+                              );
+                            }
+                          : null,
+                      actionText: _serverConfigs.isEmpty ? context.loc('add_new_server') : null,
+                    ),
+            ),
           ),
         ],
       ),

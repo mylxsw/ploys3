@@ -18,7 +18,13 @@ class S3Item {
   final bool isDirectory;
   final String? eTag;
 
-  S3Item({required this.key, this.size, this.lastModified, required this.isDirectory, this.eTag});
+  S3Item({
+    required this.key,
+    this.size,
+    this.lastModified,
+    required this.isDirectory,
+    this.eTag,
+  });
 
   /// Create an S3Item from an Object (file)
   factory S3Item.fromObject(Object obj) {
@@ -33,7 +39,13 @@ class S3Item {
 
   /// Create an S3Item from a prefix (directory)
   factory S3Item.fromPrefix(String prefix) {
-    return S3Item(key: prefix, size: null, lastModified: null, isDirectory: true, eTag: null);
+    return S3Item(
+      key: prefix,
+      size: null,
+      lastModified: null,
+      isDirectory: true,
+      eTag: null,
+    );
   }
 }
 
@@ -85,7 +97,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   void _initializeMinio() {
     try {
       // First check if this is R2 and validate
-      final validationIssues = R2ConnectionHelper.validateR2Config(widget.serverConfig);
+      final validationIssues = R2ConnectionHelper.validateR2Config(
+        widget.serverConfig,
+      );
       if (validationIssues.isNotEmpty) {
         debugPrint('Configuration validation issues:');
         for (final issue in validationIssues) {
@@ -103,7 +117,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       } else {
         // Standard S3 configuration
         final endPoint = uri.host;
-        final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
+        final port = uri.hasPort
+            ? uri.port
+            : (uri.scheme == 'https' ? 443 : 80);
         final useSSL = uri.scheme == 'https';
         final region = widget.serverConfig.region ?? 'us-east-1';
 
@@ -133,10 +149,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   Future<void> _listObjects({String? prefix}) async {
     final effectivePrefix = prefix ?? _currentPrefix;
-    final cacheKey = '${widget.serverConfig.id}:${widget.serverConfig.bucket}:$effectivePrefix';
+    final cacheKey =
+        '${widget.serverConfig.id}:${widget.serverConfig.bucket}:$effectivePrefix';
 
     // Check if we have cached data and we're not already refreshing
-    if (_cache.containsKey(cacheKey) && !_isRefreshing && _currentPrefix == effectivePrefix) {
+    if (_cache.containsKey(cacheKey) &&
+        !_isRefreshing &&
+        _currentPrefix == effectivePrefix) {
       setState(() {
         _objects = _cache[cacheKey]!;
         _isLoading = false;
@@ -158,7 +177,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       debugPrint('Using endpoint: ${widget.serverConfig.address}');
       debugPrint('Using prefix: $effectivePrefix');
 
-      final stream = _minio.listObjects(widget.serverConfig.bucket, prefix: effectivePrefix);
+      final stream = _minio.listObjects(
+        widget.serverConfig.bucket,
+        prefix: effectivePrefix,
+      );
       final results = await stream.toList();
 
       // Convert ListObjectsResult to S3Item
@@ -235,9 +257,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               '2. The bucket exists in your account';
         }
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage), duration: const Duration(seconds: 8)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 8),
+          ),
+        );
       }
     }
   }
@@ -254,7 +279,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: Container(
           padding: const EdgeInsets.all(24),
           width: 300,
@@ -265,11 +290,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               const SizedBox(height: 16),
               Text(
                 'Uploading $fileName...',
-                style: const TextStyle(color: Colors.white),
+                style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text('Please wait', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('Please wait', style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -282,7 +307,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: Container(
           padding: const EdgeInsets.all(24),
           width: 300,
@@ -293,11 +318,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               const SizedBox(height: 16),
               Text(
                 'Deleting ${fileName.split('/').last}...',
-                style: const TextStyle(color: Colors.white),
+                style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text('Please wait', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('Please wait', style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
@@ -312,7 +337,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       final flatBytes = bytes.expand((x) => x).toList();
 
       // Use our download manager for better error handling
-      final filePath = await DownloadManager.saveFile(fileName: key, bytes: Uint8List.fromList(flatBytes));
+      final filePath = await DownloadManager.saveFile(
+        fileName: key,
+        bytes: Uint8List.fromList(flatBytes),
+      );
 
       if (showDialog) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -329,9 +357,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       }
     } catch (e) {
       if (showDialog) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error downloading $key: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading $key: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
       rethrow;
     }
@@ -348,8 +379,14 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           decoration: const InputDecoration(labelText: 'New name'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Rename')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Rename'),
+          ),
         ],
       ),
     );
@@ -358,12 +395,20 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       final newKey = newKeyController.text;
       if (newKey.isNotEmpty && newKey != oldKey) {
         try {
-          await _minio.copyObject(widget.serverConfig.bucket, newKey, '/${widget.serverConfig.bucket}/$oldKey');
+          await _minio.copyObject(
+            widget.serverConfig.bucket,
+            newKey,
+            '/${widget.serverConfig.bucket}/$oldKey',
+          );
           await _minio.removeObject(widget.serverConfig.bucket, oldKey);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Renamed $oldKey to $newKey')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Renamed $oldKey to $newKey')));
           _listObjects();
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error renaming $oldKey: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error renaming $oldKey: $e')));
         }
       }
     }
@@ -376,8 +421,14 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         title: const Text('Delete Object'),
         content: Text('Are you sure you want to delete "$key"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -392,7 +443,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         // Close progress dialog
         if (mounted) {
           Navigator.pop(context); // Close progress dialog
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted $key')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Deleted $key')));
           // Clear cache and refresh
           _clearCache();
           _listObjects();
@@ -404,7 +457,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             Navigator.pop(context); // Close progress dialog
           } catch (_) {}
 
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting $key: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting $key: $e')));
         }
       }
     }
@@ -412,7 +467,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   Future<void> _deleteFolder(String folderKey) async {
     // Ensure folder key ends with '/'
-    final normalizedFolderKey = folderKey.endsWith('/') ? folderKey : '$folderKey/';
+    final normalizedFolderKey = folderKey.endsWith('/')
+        ? folderKey
+        : '$folderKey/';
 
     final bool? confirmed = await showDialog(
       context: context,
@@ -431,7 +488,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -447,7 +507,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     try {
       // First, list all objects with the folder prefix
-      final stream = _minio.listObjects(widget.serverConfig.bucket, prefix: normalizedFolderKey);
+      final stream = _minio.listObjects(
+        widget.serverConfig.bucket,
+        prefix: normalizedFolderKey,
+      );
       final results = await stream.toList();
 
       int deletedCount = 0;
@@ -466,9 +529,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       // Close progress dialog
       if (mounted) {
         Navigator.pop(context); // Close progress dialog
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Deleted folder "$folderKey" and $deletedCount object(s)')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Deleted folder "$folderKey" and $deletedCount object(s)',
+            ),
+          ),
+        );
         // Clear cache and refresh
         _clearCache();
         _listObjects();
@@ -480,7 +547,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           Navigator.pop(context); // Close progress dialog
         } catch (_) {}
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting folder $folderKey: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting folder $folderKey: $e')),
+        );
       }
     }
   }
@@ -519,49 +588,76 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Copy Options', style: TextStyle(color: Colors.white)),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            'Copy Options',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.link, color: Colors.white70),
-                title: const Text('Copy URL', style: TextStyle(color: Colors.white)),
+                leading: Icon(
+                  Icons.link,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                title: Text(
+                  'Copy URL',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 onTap: () {
                   final url = _buildFileUrl(key);
                   Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(
-                    dialogContext,
-                  ).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('URL copied to clipboard')),
+                  );
                   Navigator.pop(dialogContext);
                 },
               ),
               if (isImage) ...[
                 const Divider(color: Colors.white24),
                 ListTile(
-                  leading: const Icon(Icons.image, color: Colors.white70),
-                  title: const Text('Copy Markdown', style: TextStyle(color: Colors.white)),
+                  leading: Icon(
+                    Icons.image,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  title: Text(
+                    'Copy Markdown',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   onTap: () {
                     final url = _buildFileUrl(key);
                     final markdown = '![${key.split('/').last}]($url)';
                     Clipboard.setData(ClipboardData(text: markdown));
-                    ScaffoldMessenger.of(
-                      dialogContext,
-                    ).showSnackBar(const SnackBar(content: Text('Markdown copied to clipboard')));
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Markdown copied to clipboard'),
+                      ),
+                    );
                     Navigator.pop(dialogContext);
                   },
                 ),
               ],
             ],
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+          ],
         );
       },
     );
   }
 
   String _buildFileUrl(String key) {
-    if (widget.serverConfig.cdnUrl != null && widget.serverConfig.cdnUrl!.isNotEmpty) {
+    if (widget.serverConfig.cdnUrl != null &&
+        widget.serverConfig.cdnUrl!.isNotEmpty) {
       String cdnUrl = widget.serverConfig.cdnUrl!;
       if (cdnUrl.endsWith('/')) {
         cdnUrl = cdnUrl.substring(0, cdnUrl.length - 1);
@@ -596,7 +692,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
 
     // Check if it's an image
-    final isImage = RegExp(r'\.(jpg|jpeg|png|gif|bmp|webp|svg)$', caseSensitive: false).hasMatch(object.key);
+    final isImage = RegExp(
+      r'\.(jpg|jpeg|png|gif|bmp|webp|svg)$',
+      caseSensitive: false,
+    ).hasMatch(object.key);
 
     // For files, show preview dialog
     showDialog(
@@ -633,9 +732,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted && _isUploading) {
@@ -661,7 +763,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       // Close progress dialog
       if (mounted) {
         Navigator.pop(context); // Close progress dialog
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uploaded $fileName')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Uploaded $fileName')));
         // Clear cache and refresh to show the new file
         _clearCache();
         _listObjects(prefix: _currentPrefix);
@@ -673,9 +777,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           Navigator.pop(context); // Close progress dialog
         } catch (_) {}
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
       rethrow;
     }
@@ -703,9 +810,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to upload ${file.name}: $e'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to upload ${file.name}: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } finally {
         if (mounted) {
@@ -725,7 +835,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         title: const Text('Create Folder'),
         content: TextField(
           controller: folderNameController,
-          decoration: const InputDecoration(labelText: 'Folder name', hintText: 'Enter folder name (e.g., my-folder)'),
+          decoration: const InputDecoration(
+            labelText: 'Folder name',
+            hintText: 'Enter folder name (e.g., my-folder)',
+          ),
           autofocus: true,
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) {
@@ -734,7 +847,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           },
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               if (folderNameController.text.trim().isNotEmpty) {
@@ -761,7 +877,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       }
 
       // Build the full key with current prefix
-      final key = _currentPrefix.isEmpty ? folderName : '$_currentPrefix$folderName';
+      final key = _currentPrefix.isEmpty
+          ? folderName
+          : '$_currentPrefix$folderName';
 
       debugPrint('Creating folder: $key');
 
@@ -773,18 +891,23 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Created folder: ${folderName.replaceAll('/', '')}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Created folder: ${folderName.replaceAll('/', '')}'),
+          ),
+        );
         // Clear cache and refresh to show the new folder
         _clearCache();
         _listObjects();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create folder: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -800,8 +923,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.serverConfig.name),
-        backgroundColor: const Color(0xFF1E1E1E),
-        foregroundColor: Colors.white,
         actions: [
           // View toggle button
           IconButton(
@@ -828,7 +949,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           // Refresh button
           IconButton(
             icon: _isRefreshing
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.refresh),
             onPressed: _isLoading || _isRefreshing
                 ? null
@@ -840,7 +965,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
         ],
       ),
-      backgroundColor: const Color(0xFF121212),
       body: DropTarget(
         onDragDone: _handleDragDone,
         onDragEntered: (details) {
@@ -864,7 +988,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     child: Row(
                       children: [
                         // Home button to return to root
-                        if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
+                        if (_currentPrefix.isNotEmpty ||
+                            _prefixHistory.isNotEmpty)
                           TextButton.icon(
                             onPressed: () {
                               // Clear prefix history and go to root
@@ -879,15 +1004,23 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                             icon: const Icon(Icons.home, size: 16),
                             label: const Text('Home'),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onSurface,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                             ),
                           ),
-                        if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty) const SizedBox(width: 8),
+                        if ((_prefixHistory.isNotEmpty ||
+                                _currentPrefix.isNotEmpty) &&
+                            _currentPrefix.isNotEmpty)
+                          const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
-                            style: const TextStyle(color: Colors.white70),
+                            style: Theme.of(context).textTheme.bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -898,8 +1031,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                             icon: const Icon(Icons.arrow_back, size: 16),
                             label: const Text('Back'),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onSurface,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                             ),
                           ),
                       ],
@@ -916,14 +1054,26 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                _currentPrefix.isEmpty ? Icons.cloud_off : Icons.folder_open,
+                                _currentPrefix.isEmpty
+                                    ? Icons.cloud_off
+                                    : Icons.folder_open,
                                 size: 64,
-                                color: Colors.white24,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.2),
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                _currentPrefix.isEmpty ? 'No objects in bucket' : 'No objects in this directory',
-                                style: const TextStyle(color: Colors.white54),
+                                _currentPrefix.isEmpty
+                                    ? 'No objects in bucket'
+                                    : 'No objects in this directory',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
                               ),
                             ],
                           ),
@@ -942,7 +1092,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   child: Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E),
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.amber, width: 2),
                     ),
@@ -953,7 +1103,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                         const SizedBox(height: 16),
                         Text(
                           'Drop files here to upload',
-                          style: TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -974,17 +1128,23 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         return ListTile(
           leading: Icon(
             object.isDirectory ? Icons.folder : Icons.insert_drive_file,
-            color: object.isDirectory ? Colors.amber : Colors.white70,
+            color: object.isDirectory
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           title: Text(
-            object.key.startsWith(_currentPrefix) ? object.key.substring(_currentPrefix.length) : object.key,
-            style: const TextStyle(color: Colors.white),
+            object.key.startsWith(_currentPrefix)
+                ? object.key.substring(_currentPrefix.length)
+                : object.key,
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           subtitle: object.isDirectory
               ? null
               : Text(
                   '${_formatBytes(object.size ?? 0, 1)} • ${DateFormat('yyyy-MM-dd HH:mm').format(object.lastModified ?? DateTime.now())}',
-                  style: const TextStyle(color: Colors.white70),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
           trailing: PopupMenuButton<String>(
             onSelected: (value) {
@@ -1002,7 +1162,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   // For non-image files, copy URL directly
                   final url = _buildFileUrl(object.key);
                   Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('URL copied to clipboard')),
+                  );
                 }
               } else if (value == 'rename') {
                 _renameObject(object.key);
@@ -1048,7 +1210,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       itemBuilder: (context, index) {
         final object = _objects[index];
         return Card(
-          color: const Color(0xFF1E1E1E),
+          color: Theme.of(context).cardColor,
           child: InkWell(
             onTap: () {
               if (object.isDirectory) {
@@ -1063,14 +1225,20 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 Icon(
                   object.isDirectory ? Icons.folder : Icons.insert_drive_file,
                   size: 48,
-                  color: object.isDirectory ? Colors.amber : Colors.white70,
+                  color: object.isDirectory
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    object.key.startsWith(_currentPrefix) ? object.key.substring(_currentPrefix.length) : object.key,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    object.key.startsWith(_currentPrefix)
+                        ? object.key.substring(_currentPrefix.length)
+                        : object.key,
+                    style: Theme.of(context).textTheme.bodySmall,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -1078,7 +1246,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 ),
                 if (!object.isDirectory) ...[
                   const SizedBox(height: 4),
-                  Text(_formatBytes(object.size ?? 0, 0), style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                  Text(
+                    _formatBytes(object.size ?? 0, 0),
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
                 ],
               ],
             ),
@@ -1129,7 +1300,10 @@ class _PreviewDialogState extends State<_PreviewDialog> {
     });
 
     try {
-      final stream = await widget.minioClient.getObject(widget.serverConfig.bucket, widget.object.key);
+      final stream = await widget.minioClient.getObject(
+        widget.serverConfig.bucket,
+        widget.object.key,
+      );
       final bytes = await stream.toList();
       final flatBytes = bytes.expand((x) => x).toList();
 
@@ -1144,16 +1318,20 @@ class _PreviewDialogState extends State<_PreviewDialog> {
         setState(() {
           _isLoadingImage = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load image: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
 
   String _getFileUrl() {
     // If CDN URL is configured, use it
-    if (widget.serverConfig.cdnUrl != null && widget.serverConfig.cdnUrl!.isNotEmpty) {
+    if (widget.serverConfig.cdnUrl != null &&
+        widget.serverConfig.cdnUrl!.isNotEmpty) {
       // Remove trailing slash from CDN URL if present
       String cdnUrl = widget.serverConfig.cdnUrl!;
       if (cdnUrl.endsWith('/')) {
@@ -1173,22 +1351,29 @@ class _PreviewDialogState extends State<_PreviewDialog> {
 
   void _copyToClipboard(String text, String message) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showCopyMenu() {
     // Get the button's RenderBox using the GlobalKey
-    final RenderObject? renderObject = _copyButtonKey.currentContext?.findRenderObject();
+    final RenderObject? renderObject = _copyButtonKey.currentContext
+        ?.findRenderObject();
     if (renderObject == null || renderObject is! RenderBox) return;
 
     final button = renderObject;
-    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
 
     // Calculate position relative to the overlay
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -1199,12 +1384,20 @@ class _PreviewDialogState extends State<_PreviewDialog> {
       items: [
         const PopupMenuItem<String>(
           value: 'url',
-          child: ListTile(leading: Icon(Icons.link), title: Text('Copy URL'), dense: true),
+          child: ListTile(
+            leading: Icon(Icons.link),
+            title: Text('Copy URL'),
+            dense: true,
+          ),
         ),
         if (widget.isImage) ...[
           const PopupMenuItem<String>(
             value: 'markdown',
-            child: ListTile(leading: Icon(Icons.image), title: Text('Copy Markdown'), dense: true),
+            child: ListTile(
+              leading: Icon(Icons.image),
+              title: Text('Copy Markdown'),
+              dense: true,
+            ),
           ),
         ],
       ],
@@ -1244,9 +1437,12 @@ class _PreviewDialogState extends State<_PreviewDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -1262,7 +1458,7 @@ class _PreviewDialogState extends State<_PreviewDialog> {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
     return Dialog(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       child: Container(
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -1277,12 +1473,19 @@ class _PreviewDialogState extends State<_PreviewDialog> {
                 Expanded(
                   child: Text(
                     widget.object.key,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70),
+                  icon: Icon(
+                    Icons.close,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -1308,7 +1511,10 @@ class _PreviewDialogState extends State<_PreviewDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   key: _copyButtonKey,
@@ -1320,7 +1526,11 @@ class _PreviewDialogState extends State<_PreviewDialog> {
                 ElevatedButton.icon(
                   onPressed: _isDownloading ? null : _handleDownload,
                   icon: _isDownloading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.download),
                   label: Text(_isDownloading ? 'Downloading...' : 'Download'),
                 ),
@@ -1333,20 +1543,37 @@ class _PreviewDialogState extends State<_PreviewDialog> {
   }
 
   Widget _buildPreviewContent() {
+    final containerColor = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest;
+    final iconColor = Theme.of(
+      context,
+    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+    final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+
     if (!widget.isImage) {
       return Container(
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          color: containerColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.insert_drive_file, size: 64, color: Colors.white.withValues(alpha: 0.5)),
+              Icon(Icons.insert_drive_file, size: 64, color: iconColor),
               const SizedBox(height: 16),
-              Text('File Preview', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+              Text(
+                'File Preview',
+                style: TextStyle(color: textColor.withValues(alpha: 0.7)),
+              ),
               const SizedBox(height: 8),
               Text(
                 'Preview not available for this file type',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -1356,14 +1583,20 @@ class _PreviewDialogState extends State<_PreviewDialog> {
 
     if (_isLoadingImage) {
       return Container(
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          color: containerColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_imageBytes != null) {
       return Container(
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          color: containerColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.memory(
@@ -1374,9 +1607,12 @@ class _PreviewDialogState extends State<_PreviewDialog> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.broken_image, size: 64, color: Colors.white.withValues(alpha: 0.5)),
+                    Icon(Icons.broken_image, size: 64, color: iconColor),
                     const SizedBox(height: 16),
-                    Text('Failed to load image', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+                    Text(
+                      'Failed to load image',
+                      style: TextStyle(color: textColor.withValues(alpha: 0.7)),
+                    ),
                   ],
                 ),
               );
@@ -1387,18 +1623,27 @@ class _PreviewDialogState extends State<_PreviewDialog> {
     }
 
     return Container(
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: containerColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.image, size: 64, color: Colors.white.withValues(alpha: 0.5)),
+            Icon(Icons.image, size: 64, color: iconColor),
             const SizedBox(height: 16),
-            Text('Image Preview', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            Text(
+              'Image Preview',
+              style: TextStyle(color: textColor.withValues(alpha: 0.7)),
+            ),
             const SizedBox(height: 8),
             Text(
               'Failed to load image preview',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(
+                color: textColor.withValues(alpha: 0.5),
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -1409,13 +1654,18 @@ class _PreviewDialogState extends State<_PreviewDialog> {
   Widget _buildFileDetails(DateFormat dateFormat) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'File Information',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 16, fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           _buildDetailRow('Name', widget.object.key),
@@ -1425,9 +1675,15 @@ class _PreviewDialogState extends State<_PreviewDialog> {
           ],
           if (widget.object.lastModified != null) ...[
             const SizedBox(height: 8),
-            _buildDetailRow('Modified', dateFormat.format(widget.object.lastModified!)),
+            _buildDetailRow(
+              'Modified',
+              dateFormat.format(widget.object.lastModified!),
+            ),
           ],
-          if (widget.object.eTag != null) ...[const SizedBox(height: 8), _buildDetailRow('ETag', widget.object.eTag!)],
+          if (widget.object.eTag != null) ...[
+            const SizedBox(height: 8),
+            _buildDetailRow('ETag', widget.object.eTag!),
+          ],
           const SizedBox(height: 8),
           _buildDetailRow('Type', widget.isImage ? 'Image' : 'File'),
         ],
@@ -1439,9 +1695,14 @@ class _PreviewDialogState extends State<_PreviewDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(value, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
+        Text(value, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }

@@ -18,7 +18,8 @@ enum AppLanguage {
 /// 语言管理器
 class LanguageManager extends ChangeNotifier {
   static LanguageManager? _instance;
-  static LanguageManager get instance => _instance ??= LanguageManager._internal();
+  static LanguageManager get instance =>
+      _instance ??= LanguageManager._internal();
 
   LanguageManager._internal() {
     _loadLanguage();
@@ -79,7 +80,7 @@ class LanguageManager extends ChangeNotifier {
 
       // 主页面
       's3_manager': 'S3 管理器',
-      'add_new_server': '添加新服务器',
+      'add_new_server': '新服务器',
       'no_server_selected': '未选择服务器',
       'select_server_to_start': '选择一个服务器开始浏览',
       'settings': '设置',
@@ -142,9 +143,11 @@ class LanguageManager extends ChangeNotifier {
 
       // 错误信息
       'connection_error': '连接错误',
-      'connection_failed_check': '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
+      'connection_failed_check':
+          '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
       'access_denied': '访问被拒绝',
-      'access_denied_check': '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
+      'access_denied_check':
+          '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
       'bucket_not_found': '存储桶未找到',
       'bucket_not_found_check': '存储桶未找到。请检查：\n1. 存储桶名称拼写是否正确\n2. 存储桶是否存在于您的账户中',
 
@@ -173,9 +176,10 @@ class LanguageManager extends ChangeNotifier {
 
       // Main page
       's3_manager': 'S3 Manager',
-      'add_new_server': 'Add New Server',
+      'add_new_server': 'New Server',
       'no_server_selected': 'No Server Selected',
-      'select_server_to_start': 'Select a server from the list to start browsing',
+      'select_server_to_start':
+          'Select a server from the list to start browsing',
       'settings': 'Settings',
 
       // Server list
@@ -223,7 +227,6 @@ class LanguageManager extends ChangeNotifier {
       'url_copied': 'URL copied to clipboard',
       'markdown_copied': 'Markdown copied to clipboard',
       'copy_options': 'Copy Options',
-      'copy_url': 'Copy URL',
       'copy_markdown': 'Copy Markdown',
 
       // Settings page
@@ -238,15 +241,19 @@ class LanguageManager extends ChangeNotifier {
 
       // Error messages
       'connection_error': 'Connection Error',
-      'connection_failed_check': 'Connection failed. Please check:\n1. Your network connection\n2. The endpoint URL is correct\n3. Your access credentials are valid\n4. For R2: Ensure the bucket exists and is accessible',
+      'connection_failed_check':
+          'Connection failed. Please check:\n1. Your network connection\n2. The endpoint URL is correct\n3. Your access credentials are valid\n4. For R2: Ensure the bucket exists and is accessible',
       'access_denied': 'Access Denied',
-      'access_denied_check': 'Access denied. Please check:\n1. Your access key and secret are correct\n2. The bucket exists\n3. You have list permissions on the bucket',
+      'access_denied_check':
+          'Access denied. Please check:\n1. Your access key and secret are correct\n2. The bucket exists\n3. You have list permissions on the bucket',
       'bucket_not_found': 'Bucket Not Found',
-      'bucket_not_found_check': 'Bucket not found. Please check:\n1. The bucket name is spelled correctly\n2. The bucket exists in your account',
+      'bucket_not_found_check':
+          'Bucket not found. Please check:\n1. The bucket name is spelled correctly\n2. The bucket exists in your account',
 
       // Confirm dialogs
       'confirm_delete': 'Confirm Delete',
-      'confirm_delete_folder': 'Are you sure you want to delete folder "%s" and all its contents?',
+      'confirm_delete_folder':
+          'Are you sure you want to delete folder "%s" and all its contents?',
       'confirm_delete_file': 'Are you sure you want to delete file "%s"?',
       'cancel_btn': 'Cancel',
       'confirm_btn': 'Confirm',

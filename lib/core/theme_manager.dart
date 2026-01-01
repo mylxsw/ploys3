@@ -28,7 +28,8 @@ class ThemeManager extends ChangeNotifier {
       case AppThemeMode.dark:
         return AppTheme.darkTheme();
       case AppThemeMode.system:
-        return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark
+        return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark
             ? AppTheme.darkTheme()
             : AppTheme.lightTheme();
     }
@@ -107,7 +108,8 @@ class ThemeProvider extends StatefulWidget {
   State<ThemeProvider> createState() => _ThemeProviderState();
 }
 
-class _ThemeProviderState extends State<ThemeProvider> with WidgetsBindingObserver {
+class _ThemeProviderState extends State<ThemeProvider>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -123,9 +125,7 @@ class _ThemeProviderState extends State<ThemeProvider> with WidgetsBindingObserv
   @override
   void didChangePlatformBrightness() {
     // 系统主题改变时，如果是跟随系统模式，则通知更新
-    if (ThemeManager.instance.themeMode == AppThemeMode.system) {
-      ThemeManager.instance.notifyListeners();
-    }
+    ThemeManager.instance.refreshTheme();
   }
 
   @override

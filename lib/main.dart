@@ -40,11 +40,7 @@ class App extends StatelessWidget {
           title: 'S3 Manager',
           theme: ThemeManager.instance.currentTheme,
           debugShowCheckedModeBanner: false,
-          home: const LanguageProvider(
-            child: ThemeProvider(
-              child: AppShell(),
-            ),
-          ),
+          home: const LanguageProvider(child: ThemeProvider(child: AppShell())),
         );
       },
     );
@@ -62,6 +58,9 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   List<S3ServerConfig> _serverConfigs = [];
   S3ServerConfig? _selectedServerConfig;
+  bool _isSidebarExtended = true;
+  double _sidebarWidth = 220.0;
+  bool _isHoveringResizeHandle = false;
 
   @override
   void initState() {
@@ -71,7 +70,8 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings =
+        prefs.getStringList('server_configs') ?? [];
     setState(() {
       _serverConfigs = serverConfigsStrings
           .map((config) => S3ServerConfig.fromJson(json.decode(config)))
@@ -80,225 +80,389 @@ class _AppShellState extends State<AppShell> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          // 左侧导航栏
-          NavigationRail(
-            extended: true,
-            minExtendedWidth: 280,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 2,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                children: [
-                  // Logo
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Auto-collapse if width is small
+        if (constraints.maxWidth < 600 && _isSidebarExtended) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isSidebarExtended = false;
+              });
+            }
+          });
+        }
+
+        return Scaffold(
+          body: Row(
+            children: [
+              // 左侧导航栏 - NavigationRail
+              NavigationRail(
+                extended: _isSidebarExtended,
+                minExtendedWidth: _sidebarWidth,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 2,
+                leading: Column(
+                  children: [
+                    if (_isSidebarExtended)
+                      SizedBox(
+                        height: 80,
+                        width: _sidebarWidth,
+                        child: Stack(
+                          children: [
+                            // Logo - Vertically aligned
+                            Positioned(
+                              top: 24,
+                              left: 12,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Theme.of(context).colorScheme.primary,
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.secondary,
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.cloud_outlined,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'S3',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                      ),
+                                      Text(
+                                        'MANAGER',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              fontSize: 8,
+                                              letterSpacing: 2,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Collapse Button - Absolute Top Right
+                            Positioned(
+                              top: 12,
+                              right: 4,
+                              child: IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: Icon(
+                                  Icons.menu_open_rounded,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSidebarExtended = false;
+                                  });
+                                },
+                                tooltip: 'Collapse',
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Collapsed: Toggle acts as logo
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Theme.of(context).colorScheme.primary,
-                              Theme.of(context).colorScheme.secondary,
-                            ],
+                        height: 80,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.only(top: 24),
+                        child: IconButton(
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.secondary,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.cloud_outlined,
+                              size: 24,
+                              color: Colors.white,
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.cloud_outlined,
-                          size: 32,
-                          color: Colors.white,
+                          onPressed: () {
+                            setState(() {
+                              _isSidebarExtended = true;
+                            });
+                          },
+                          tooltip: 'Expand',
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'S3',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                    const SizedBox(height: 12),
+                    // Add Server Button
+                    // Add Server Button
+                    if (_isSidebarExtended)
+                      SizedBox(
+                        width: _sidebarWidth - 32,
+                        child: AppComponents.primaryButton(
+                          text: context.loc('add_new_server'),
+                          icon: Icons.add,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    S3ConfigPage(onSave: _loadConfigs),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      Center(
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    S3ConfigPage(onSave: _loadConfigs),
+                              ),
+                            );
+                          },
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                          Text(
-                            'MANAGER',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              letterSpacing: 2,
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
+                          tooltip: context.loc('add_new_server'),
+                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  // 添加服务器按钮
-                  SizedBox(
-                    width: 200,
-                    child: AppComponents.primaryButton(
-                      text: context.loc('add_new_server'),
-                      icon: Icons.add,
-                      onPressed: () {
-                        Navigator.push(
+                  ],
+                ),
+                indicatorColor: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                indicatorShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                destinations: [
+                  ..._serverConfigs.map((server) {
+                    final isSelected = _selectedServerConfig?.id == server.id;
+                    return NavigationRailDestination(
+                      icon: Icon(
+                        Icons.cloud_outlined,
+                        size: 24,
+                        color: Theme.of(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => S3ConfigPage(onSave: _loadConfigs),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            destinations: [
-              // 服务器列表
-              ..._serverConfigs.map((server) {
-                final isSelected = _selectedServerConfig?.id == server.id;
-                return NavigationRailDestination(
-                  icon: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: null, // Handled by NavigationRail
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.cloud_outlined,
-                          size: 24,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
-                    ),
-                  ),
-                  selectedIcon: Material(
-                    color: Colors.transparent,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Icon(
+                      selectedIcon: Icon(
                         Icons.cloud_done,
                         size: 24,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                    ),
-                  ),
-                  label: Text(
-                    server.name,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                );
-              }),
-            ],
-            trailing: Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // 设置按钮
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsPage(),
-                            ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.settings_outlined,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                context.loc('settings'),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                      label: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: _sidebarWidth - 80, // Prevent overflow
+                        ),
+                        child: Text(
+                          server.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    );
+                  }),
                 ],
-              ),
-            ),
-            onDestinationSelected: (index) {
-              setState(() {
-                _selectedServerConfig = _serverConfigs[index];
-              });
-            },
-            selectedIndex: _selectedServerConfig != null && _serverConfigs.isNotEmpty
-                ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id)
-                : null,
-          ),
-
-          // 右侧内容区域
-          Expanded(
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: _selectedServerConfig != null
-                  ? S3BrowserPage(serverConfig: _selectedServerConfig!)
-                  : AppComponents.emptyState(
-                      icon: Icons.cloud_off_outlined,
-                      title: context.loc('no_server_selected'),
-                      subtitle: context.loc('select_server_to_start'),
-                      onAction: _serverConfigs.isEmpty
-                          ? () {
+                trailing: Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Settings Button
+                      Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => S3ConfigPage(onSave: _loadConfigs),
+                                  builder: (context) => const SettingsPage(),
                                 ),
                               );
-                            }
-                          : null,
-                      actionText: _serverConfigs.isEmpty ? context.loc('add_new_server') : null,
-                    ),
-            ),
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: _isSidebarExtended
+                                  ? Row(
+                                      children: [
+                                        Icon(
+                                          Icons.settings_outlined,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          context.loc('settings'),
+                                          style: TextStyle(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Icon(
+                                      Icons.settings_outlined,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      size: 24,
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _selectedServerConfig = _serverConfigs[index];
+                  });
+                },
+                selectedIndex:
+                    _selectedServerConfig != null && _serverConfigs.isNotEmpty
+                    ? _serverConfigs.indexWhere(
+                        (s) => s.id == _selectedServerConfig!.id,
+                      )
+                    : null,
+              ),
+
+              // Resize Handle
+              MouseRegion(
+                cursor: SystemMouseCursors.resizeColumn,
+                onEnter: (_) => setState(() => _isHoveringResizeHandle = true),
+                onExit: (_) => setState(() => _isHoveringResizeHandle = false),
+                child: GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    setState(() {
+                      // Only resize if extended
+                      if (!_isSidebarExtended) {
+                        if (details.delta.dx > 5) {
+                          _isSidebarExtended = true;
+                        }
+                        return;
+                      }
+
+                      _sidebarWidth += details.delta.dx;
+                      if (_sidebarWidth < 180) _sidebarWidth = 180;
+                      if (_sidebarWidth > 400) _sidebarWidth = 400;
+                    });
+                  },
+                  child: Container(
+                    width: 5,
+                    height: double.infinity,
+                    color: _isHoveringResizeHandle
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.3)
+                        : Colors.transparent,
+                  ),
+                ),
+              ),
+
+              // Right Content Area
+              Expanded(
+                child: Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _selectedServerConfig != null
+                      ? S3BrowserPage(serverConfig: _selectedServerConfig!)
+                      : AppComponents.emptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: context.loc('no_server_selected'),
+                          subtitle: context.loc('select_server_to_start'),
+                          onAction: _serverConfigs.isEmpty
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          S3ConfigPage(onSave: _loadConfigs),
+                                    ),
+                                  );
+                                }
+                              : null,
+                          actionText: _serverConfigs.isEmpty
+                              ? context.loc('add_new_server')
+                              : null,
+                        ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

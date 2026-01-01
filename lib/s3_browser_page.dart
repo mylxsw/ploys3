@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -67,6 +68,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   bool _isGridView = false;
   String _currentPrefix = '';
   List<String> _prefixHistory = [];
+  bool _isDragging = false;
 
   // Cache storage for file listings
   final Map<String, List<S3Item>> _cache = {};
@@ -443,6 +445,86 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
   }
 
+  Future<void> _deleteFolder(String folderKey) async {
+    // Ensure folder key ends with '/'
+    final normalizedFolderKey = folderKey.endsWith('/') ? folderKey : '$folderKey/';
+
+    final bool? confirmed = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Folder'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete the folder "$folderKey"?'),
+            const SizedBox(height: 8),
+            const Text(
+              'Warning: This will delete all files and subfolders inside!',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show progress dialog
+    _showDeleteProgressDialog(folderKey);
+
+    try {
+      // First, list all objects with the folder prefix
+      final stream = _minio.listObjects(
+        widget.serverConfig.bucket,
+        prefix: normalizedFolderKey,
+      );
+      final results = await stream.toList();
+
+      int deletedCount = 0;
+
+      // Delete all objects in the folder
+      for (final result in results) {
+        // Delete objects
+        for (final obj in result.objects) {
+          if (obj.key != null) {
+            await _minio.removeObject(widget.serverConfig.bucket, obj.key!);
+            deletedCount++;
+          }
+        }
+      }
+
+      // Close progress dialog
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Deleted folder "$folderKey" and $deletedCount object(s)')),
+        );
+        // Clear cache and refresh
+        _clearCache();
+        _listObjects();
+      }
+    } catch (e) {
+      // Close progress dialog if still open
+      if (mounted) {
+        try {
+          Navigator.pop(context); // Close progress dialog
+        } catch (_) {}
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting folder $folderKey: $e')),
+        );
+      }
+    }
+  }
+
   String _formatBytes(int bytes, int decimals) {
     if (bytes <= 0) return "0 B";
     const suffixes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
@@ -638,31 +720,52 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         final filePath = file.path!;
         final fileName = file.name;
 
-        // Determine the key (path in bucket)
-        final key = _currentPrefix.isEmpty ? fileName : '$_currentPrefix$fileName';
-
-        debugPrint('Uploading $fileName to $key');
-
-        // Show progress dialog
-        _showUploadProgressDialog(fileName);
-
-        await _minio.fPutObject(widget.serverConfig.bucket, key, filePath);
-
-        // Close progress dialog
-        if (mounted) {
-          Navigator.pop(context); // Close progress dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Uploaded $fileName')),
-          );
-          // Clear cache and refresh to show the new file
-          _clearCache();
-          _listObjects(prefix: _currentPrefix);
-        }
+        await _uploadFileFromPath(filePath, fileName);
       } else {
         // User cancelled file picker
         setState(() {
           _isUploading = false;
         });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted && _isUploading) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _uploadFileFromPath(String filePath, String fileName) async {
+    // Determine the key (path in bucket)
+    final key = _currentPrefix.isEmpty ? fileName : '$_currentPrefix$fileName';
+
+    debugPrint('Uploading $fileName to $key');
+
+    // Show progress dialog
+    _showUploadProgressDialog(fileName);
+
+    try {
+      await _minio.fPutObject(widget.serverConfig.bucket, key, filePath);
+
+      // Close progress dialog
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Uploaded $fileName')),
+        );
+        // Clear cache and refresh to show the new file
+        _clearCache();
+        _listObjects(prefix: _currentPrefix);
       }
     } catch (e) {
       // Close progress dialog if still open
@@ -678,8 +781,129 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
         );
       }
+      rethrow;
+    }
+  }
+
+  void _handleDragDone(DropDoneDetails details) async {
+    setState(() {
+      _isDragging = false;
+    });
+
+    if (details.files.isEmpty) return;
+
+    // Process each dropped file
+    for (final file in details.files) {
+      try {
+        final fileName = file.name;
+        final filePath = file.path;
+
+        if (filePath != null) {
+          setState(() {
+            _isUploading = true;
+          });
+
+          await _uploadFileFromPath(filePath, fileName);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to upload ${file.name}: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isUploading = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _createFolder() async {
+    final folderNameController = TextEditingController();
+    final bool? confirmed = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Folder'),
+        content: TextField(
+          controller: folderNameController,
+          decoration: const InputDecoration(
+            labelText: 'Folder name',
+            hintText: 'Enter folder name (e.g., my-folder)',
+          ),
+          autofocus: true,
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              Navigator.pop(context, true);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (folderNameController.text.trim().isNotEmpty) {
+                Navigator.pop(context, true);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || folderNameController.text.trim().isEmpty) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      // Normalize folder name - ensure it ends with /
+      String folderName = folderNameController.text.trim();
+      if (!folderName.endsWith('/')) {
+        folderName = '$folderName/';
+      }
+
+      // Build the full key with current prefix
+      final key = _currentPrefix.isEmpty ? folderName : '$_currentPrefix$folderName';
+
+      debugPrint('Creating folder: $key');
+
+      // In S3, folders are created by uploading an empty object with the folder name ending with /
+      await _minio.putObject(
+        widget.serverConfig.bucket,
+        key,
+        Stream.fromIterable([Uint8List(0)]), // Empty content
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Created folder: ${folderName.replaceAll('/', '')}')),
+        );
+        // Clear cache and refresh to show the new folder
+        _clearCache();
+        _listObjects();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      if (mounted && _isUploading) {
+      if (mounted) {
         setState(() {
           _isUploading = false;
         });
@@ -705,6 +929,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             },
             tooltip: _isGridView ? 'List view' : 'Grid view',
           ),
+          // Create folder button
+          IconButton(
+            icon: const Icon(Icons.create_new_folder),
+            onPressed: _isUploading ? null : _createFolder,
+            tooltip: 'Create folder',
+          ),
           // Upload button
           IconButton(
             icon: const Icon(Icons.upload_file),
@@ -729,64 +959,115 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         ],
       ),
       backgroundColor: const Color(0xFF121212),
-      body: Column(
-        children: [
-          // Breadcrumb navigation
-          if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  if (_prefixHistory.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: _goBack,
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Back'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                    ),
-                  if (_prefixHistory.isNotEmpty && _currentPrefix.isNotEmpty)
-                    const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
-                      style: const TextStyle(color: Colors.white70),
-                      overflow: TextOverflow.ellipsis,
+      body: DropTarget(
+        onDragDone: _handleDragDone,
+        onDragEntered: (details) {
+          setState(() {
+            _isDragging = true;
+          });
+        },
+        onDragExited: (details) {
+          setState(() {
+            _isDragging = false;
+          });
+        },
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Breadcrumb navigation
+                if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        if (_prefixHistory.isNotEmpty)
+                          TextButton.icon(
+                            onPressed: _goBack,
+                            icon: const Icon(Icons.arrow_back, size: 16),
+                            label: const Text('Back'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                          ),
+                        if (_prefixHistory.isNotEmpty && _currentPrefix.isNotEmpty)
+                          const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _currentPrefix.isEmpty ? 'Root' : _currentPrefix,
+                            style: const TextStyle(color: Colors.white70),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
 
-          // Objects list/grid
-          Expanded(
-            child: _isLoading && !_isRefreshing
-                ? const Center(child: CircularProgressIndicator())
-                : _objects.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _currentPrefix.isEmpty ? Icons.cloud_off : Icons.folder_open,
-                              size: 64,
-                              color: Colors.white24,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _currentPrefix.isEmpty
-                                  ? 'No objects in bucket'
-                                  : 'No objects in this directory',
-                              style: const TextStyle(color: Colors.white54),
-                            ),
-                          ],
+                // Objects list/grid
+                Expanded(
+                  child: _isLoading && !_isRefreshing
+                      ? const Center(child: CircularProgressIndicator())
+                      : _objects.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _currentPrefix.isEmpty ? Icons.cloud_off : Icons.folder_open,
+                                    size: 64,
+                                    color: Colors.white24,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _currentPrefix.isEmpty
+                                        ? 'No objects in bucket'
+                                        : 'No objects in this directory',
+                                    style: const TextStyle(color: Colors.white54),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : _isGridView ? _buildGridView() : _buildListView(),
+                ),
+              ],
+            ),
+            // Drag overlay
+            if (_isDragging)
+              Container(
+                color: Colors.black.withValues(alpha: 0.5),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber, width: 2),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.cloud_upload,
+                          size: 64,
+                          color: Colors.amber,
                         ),
-                      )
-                    : _isGridView ? _buildGridView() : _buildListView(),
-          ),
-        ],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Drop files here to upload',
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -820,7 +1101,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               } else if (value == 'rename') {
                 _renameObject(object.key);
               } else if (value == 'delete') {
-                _deleteObject(object.key);
+                if (object.isDirectory) {
+                  _deleteFolder(object.key);
+                } else {
+                  _deleteObject(object.key);
+                }
               }
             },
             itemBuilder: (context) => [
@@ -833,11 +1118,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   value: 'rename',
                   child: Text('Rename'),
                 ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete'),
-                ),
               ],
+              const PopupMenuItem(
+                value: 'delete',
+                child: Text('Delete'),
+              ),
             ],
           ),
           onTap: () {

@@ -259,7 +259,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (showDialog) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded to: ${filePath.split('/').last}'),
+            content: Text('Downloaded: ${filePath.split('/').last}'),
             action: SnackBarAction(
               label: 'Open',
               onPressed: () {
@@ -861,7 +861,7 @@ class _PreviewDialogState extends State<_PreviewDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download started: ${widget.object.key}'),
+            content: Text('Downloaded: ${widget.object.key.split('/').last}'),
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {},

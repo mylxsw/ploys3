@@ -8,8 +8,23 @@ import 'package:path/path.dart' as path;
 class DownloadManager {
   /// Get the appropriate download directory based on platform
   static Future<Directory?> getDownloadDirectory() async {
-    if (Platform.isMacOS || Platform.isLinux) {
-      // For macOS/Linux, use Downloads folder
+    // For sandboxed macOS apps, we can't access the real Downloads folder
+    // Instead, use the app's Documents directory
+    if (Platform.isMacOS) {
+      try {
+        // Try to get the application documents directory
+        final appDocDir = await getApplicationDocumentsDirectory();
+        // Create a Downloads subdirectory within the app's sandbox
+        final downloadsDir = Directory(path.join(appDocDir.path, 'Downloads'));
+        if (!downloadsDir.existsSync()) {
+          await downloadsDir.create(recursive: true);
+        }
+        return downloadsDir;
+      } catch (e) {
+        debugPrint('Error creating downloads directory: $e');
+      }
+    } else if (Platform.isLinux) {
+      // For Linux, try the user's Downloads folder
       final homeDir = Platform.environment['HOME'];
       if (homeDir != null) {
         final downloadsDir = Directory(path.join(homeDir, 'Downloads'));
@@ -19,7 +34,7 @@ class DownloadManager {
       }
     }
 
-    // Fallback to application documents directory
+    // Final fallback to application documents directory
     return getApplicationDocumentsDirectory();
   }
 
@@ -100,7 +115,7 @@ class DownloadManager {
       Navigator.pop(context); // Close progress dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Downloaded to: ${path.basename(filePath)}'),
+          content: Text('Downloaded: ${path.basename(filePath)}'),
           action: SnackBarAction(
             label: 'Open',
             onPressed: () {

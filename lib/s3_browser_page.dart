@@ -985,7 +985,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 // Breadcrumb navigation
                 if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(8),
                     child: Row(
                       children: [
                         // Home button to return to root
@@ -1314,8 +1314,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   Widget _buildGridView() {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 150,
         childAspectRatio: 1,
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,

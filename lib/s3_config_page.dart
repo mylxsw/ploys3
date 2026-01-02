@@ -1,7 +1,10 @@
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:s3_ui/models/s3_server_config.dart';
+
+import 'package:s3_ui/widgets/window_title_bar.dart';
 
 class S3ConfigPage extends StatefulWidget {
   final VoidCallback onSave;
@@ -20,13 +23,15 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
   final TextEditingController _bucketController = TextEditingController();
   final TextEditingController _accessKeyIdController = TextEditingController();
   final TextEditingController _cdnUrlController = TextEditingController();
-  final TextEditingController _secretAccessKeyController = TextEditingController();
+  final TextEditingController _secretAccessKeyController =
+      TextEditingController();
   final TextEditingController _regionController = TextEditingController();
 
   Future<void> _saveConfig() async {
     if (_formKey.currentState!.validate()) {
       final prefs = await SharedPreferences.getInstance();
-      final List<String> serverConfigs = prefs.getStringList('server_configs') ?? [];
+      final List<String> serverConfigs =
+          prefs.getStringList('server_configs') ?? [];
 
       if (widget.existingConfig != null) {
         // Editing existing config - preserve the ID
@@ -37,8 +42,12 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           bucket: _bucketController.text,
           accessKeyId: _accessKeyIdController.text,
           secretAccessKey: _secretAccessKeyController.text,
-          region: _regionController.text.isNotEmpty ? _regionController.text : null,
-          cdnUrl: _cdnUrlController.text.isNotEmpty ? _cdnUrlController.text : null,
+          region: _regionController.text.isNotEmpty
+              ? _regionController.text
+              : null,
+          cdnUrl: _cdnUrlController.text.isNotEmpty
+              ? _cdnUrlController.text
+              : null,
         );
 
         // Find and replace the existing config
@@ -59,8 +68,12 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           bucket: _bucketController.text,
           accessKeyId: _accessKeyIdController.text,
           secretAccessKey: _secretAccessKeyController.text,
-          region: _regionController.text.isNotEmpty ? _regionController.text : null,
-          cdnUrl: _cdnUrlController.text.isNotEmpty ? _cdnUrlController.text : null,
+          region: _regionController.text.isNotEmpty
+              ? _regionController.text
+              : null,
+          cdnUrl: _cdnUrlController.text.isNotEmpty
+              ? _cdnUrlController.text
+              : null,
         );
 
         serverConfigs.add(json.encode(newConfig.toJson()));
@@ -106,58 +119,119 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.existingConfig != null ? 'Edit Server' : 'Add Server'),
-        elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: ListView(
-                  children: <Widget>[
-                    _buildTextFormField('Name', _nameController, 'e.g., My Personal S3'),
-                    _buildTextFormField('Address', _addressController, 'https://s3.example.com'),
-                    _buildTextFormField('Bucket', _bucketController, 'my-bucket'),
-                    _buildTextFormField('Access Key ID', _accessKeyIdController, 'your-access-key-id'),
-                    _buildTextFormField('Secret Access Key', _secretAccessKeyController, 'your-secret-access-key', obscureText: true),
-                    _buildTextFormField('Region (optional)', _regionController, 'auto (for R2) or us-east-1'),
-                    _buildTextFormField('CDN URL (optional)', _cdnUrlController, 'https://cdn.example.com'),
-                  ],
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      body: WindowBorder(
+        color: Colors.transparent,
+        width: 0,
+        child: Column(
+          children: [
+            const WindowTitleBar(),
+            Expanded(
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(
+                    widget.existingConfig != null
+                        ? 'Edit Server'
+                        : 'Add Server',
+                  ),
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                ),
+                backgroundColor: Colors.transparent,
+                body: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Expanded(
+                              child: ListView(
+                                children: <Widget>[
+                                  _buildTextFormField(
+                                    'Name',
+                                    _nameController,
+                                    'e.g., My Personal S3',
+                                  ),
+                                  _buildTextFormField(
+                                    'Address',
+                                    _addressController,
+                                    'https://s3.example.com',
+                                  ),
+                                  _buildTextFormField(
+                                    'Bucket',
+                                    _bucketController,
+                                    'my-bucket',
+                                  ),
+                                  _buildTextFormField(
+                                    'Access Key ID',
+                                    _accessKeyIdController,
+                                    'your-access-key-id',
+                                  ),
+                                  _buildTextFormField(
+                                    'Secret Access Key',
+                                    _secretAccessKeyController,
+                                    'your-secret-access-key',
+                                    obscureText: true,
+                                  ),
+                                  _buildTextFormField(
+                                    'Region (optional)',
+                                    _regionController,
+                                    'auto (for R2) or us-east-1',
+                                  ),
+                                  _buildTextFormField(
+                                    'CDN URL (optional)',
+                                    _cdnUrlController,
+                                    'https://cdn.example.com',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Cancel'),
+                                ),
+                                const SizedBox(width: 12),
+                                ElevatedButton(
+                                  onPressed: _saveConfig,
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  child: const Text('Save'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _saveConfig,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Save'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTextFormField(String label, TextEditingController controller, String hintText, {bool obscureText = false}) {
+  Widget _buildTextFormField(
+    String label,
+    TextEditingController controller,
+    String hintText, {
+    bool obscureText = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: TextFormField(
@@ -166,15 +240,16 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Theme.of(context).indicatorColor, width: 2),
+            borderSide: BorderSide(
+              color: Theme.of(context).indicatorColor,
+              width: 2,
+            ),
             borderRadius: BorderRadius.circular(8),
           ),
           filled: true,
-          fillColor: Colors.black.withOpacity(0.2),
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {

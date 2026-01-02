@@ -246,9 +246,9 @@ class _AppShellState extends State<AppShell> {
                                   Container(
                                     height: 60,
                                     alignment: Alignment.center,
-                                    child: IconButton(
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(8),
+                                    child: Tooltip(
+                                      message: 'Expand',
+                                      child: Container(
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             colors: [
@@ -264,18 +264,28 @@ class _AppShellState extends State<AppShell> {
                                             8,
                                           ),
                                         ),
-                                        child: const Icon(
-                                          Icons.cloud_outlined,
-                                          size: 24,
-                                          color: Colors.white,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                _isSidebarExtended = true;
+                                              });
+                                            },
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(8),
+                                              child: Icon(
+                                                Icons.cloud_outlined,
+                                                size: 24,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _isSidebarExtended = true;
-                                        });
-                                      },
-                                      tooltip: 'Expand',
                                     ),
                                   ),
                                 const SizedBox(height: 12),
@@ -300,19 +310,9 @@ class _AppShellState extends State<AppShell> {
                                   )
                                 else
                                   Center(
-                                    child: IconButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => S3ConfigPage(
-                                              onSave: _loadConfigs,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(8),
+                                    child: Tooltip(
+                                      message: context.loc('add_new_server'),
+                                      child: Container(
                                         decoration: BoxDecoration(
                                           color: Theme.of(
                                             context,
@@ -321,13 +321,34 @@ class _AppShellState extends State<AppShell> {
                                             8,
                                           ),
                                         ),
-                                        child: const Icon(
-                                          Icons.add,
-                                          color: Colors.white,
-                                          size: 20,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      S3ConfigPage(
+                                                        onSave: _loadConfigs,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(8),
+                                              child: Icon(
+                                                Icons.add,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      tooltip: context.loc('add_new_server'),
                                     ),
                                   ),
                               ],

@@ -83,6 +83,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   _uploadManager; // Make UploadManager nullable to prevent crashes
   String? _initError;
 
+  // Multi-select state
+  final Set<String> _selectedItems = {};
+  bool _isSelectionMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -906,6 +910,86 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
   }
 
+  Future<void> _batchDownload() async {
+    if (_selectedItems.isEmpty) return;
+
+    for (final key in _selectedItems.toList()) {
+      await _downloadObject(key);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloaded ${_selectedItems.length} files')),
+      );
+      setState(() {
+        _isSelectionMode = false;
+        _selectedItems.clear();
+      });
+    }
+  }
+
+  Future<void> _batchDelete() async {
+    if (_selectedItems.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.loc('confirm_delete')),
+        content: Text(
+          'Are you sure you want to delete ${_selectedItems.length} items?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(context.loc('delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    int successCount = 0;
+    int failCount = 0;
+
+    for (final key in _selectedItems.toList()) {
+      try {
+        await _minio.removeObject(widget.serverConfig.bucket, key);
+        successCount++;
+      } catch (e) {
+        failCount++;
+        debugPrint('Failed to delete $key: $e');
+      }
+    }
+
+    if (mounted) {
+      _clearCache();
+      await _listObjects(prefix: _currentPrefix);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failCount > 0
+                ? 'Deleted $successCount files, failed $failCount'
+                : 'Deleted $successCount files',
+          ),
+        ),
+      );
+
+      setState(() {
+        _isSelectionMode = false;
+        _selectedItems.clear();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint(
@@ -959,50 +1043,119 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.serverConfig.name),
+        title: _isSelectionMode
+            ? Text('${_selectedItems.length} selected')
+            : Text(widget.serverConfig.name),
         backgroundColor: Colors.transparent,
-        actions: [
-          // Edit Server Button
-          if (widget.onEditServer != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: widget.onEditServer,
-              tooltip: context.loc('edit_server'),
-            ),
-          // View toggle button
-          IconButton(
-            icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
-            onPressed: () {
-              setState(() {
-                _isGridView = !_isGridView;
-              });
-            },
-            tooltip: _isGridView ? 'List view' : 'Grid view',
-          ),
-          // Create folder button
-          IconButton(
-            icon: const Icon(Icons.create_new_folder),
-            onPressed: _isUploading ? null : _createFolder,
-            tooltip: 'Create folder',
-          ),
-          // Upload button
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            onPressed: _isUploading ? null : _uploadFile,
-            tooltip: 'Upload file',
-          ),
-          // Refresh button
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading || _isRefreshing
-                ? null
-                : () {
-                    _clearCache();
-                    _listObjects(prefix: _currentPrefix);
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedItems.clear();
+                  });
+                },
+                tooltip: 'Cancel selection',
+              )
+            : null,
+        actions: _isSelectionMode
+            ? [
+                // Select All button
+                IconButton(
+                  icon: Icon(
+                    _selectedItems.length ==
+                            _objects.where((o) => !o.isDirectory).length
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (_selectedItems.length ==
+                          _objects.where((o) => !o.isDirectory).length) {
+                        _selectedItems.clear();
+                      } else {
+                        _selectedItems.clear();
+                        for (final obj in _objects.where(
+                          (o) => !o.isDirectory,
+                        )) {
+                          _selectedItems.add(obj.key);
+                        }
+                      }
+                    });
                   },
-            tooltip: 'Refresh',
-          ),
-        ],
+                  tooltip: 'Select all',
+                ),
+                // Batch download
+                IconButton(
+                  icon: const Icon(Icons.download),
+                  onPressed: _selectedItems.isEmpty ? null : _batchDownload,
+                  tooltip: 'Download selected',
+                ),
+                // Batch delete
+                IconButton(
+                  icon: Icon(
+                    Icons.delete,
+                    color: _selectedItems.isEmpty
+                        ? null
+                        : Theme.of(context).colorScheme.error,
+                  ),
+                  onPressed: _selectedItems.isEmpty ? null : _batchDelete,
+                  tooltip: 'Delete selected',
+                ),
+              ]
+            : [
+                // Selection mode toggle
+                IconButton(
+                  icon: const Icon(Icons.checklist),
+                  onPressed: () {
+                    setState(() {
+                      _isSelectionMode = true;
+                    });
+                  },
+                  tooltip: 'Select files',
+                ),
+                // Edit Server Button
+                if (widget.onEditServer != null)
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: widget.onEditServer,
+                    tooltip: context.loc('edit_server'),
+                  ),
+                // View toggle button
+                IconButton(
+                  icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+                  onPressed: () {
+                    setState(() {
+                      _isGridView = !_isGridView;
+                    });
+                  },
+                  tooltip: _isGridView ? 'List view' : 'Grid view',
+                ),
+                // Create folder button
+                IconButton(
+                  icon: const Icon(Icons.create_new_folder),
+                  onPressed: _isUploading ? null : _createFolder,
+                  tooltip: 'Create folder',
+                ),
+                // Upload button
+                IconButton(
+                  icon: const Icon(Icons.upload_file),
+                  onPressed: _isUploading ? null : _uploadFile,
+                  tooltip: 'Upload file',
+                ),
+                // Refresh button
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _isLoading || _isRefreshing
+                      ? null
+                      : () {
+                          _clearCache();
+                          _listObjects(prefix: _currentPrefix);
+                        },
+                  tooltip: 'Refresh',
+                ),
+              ],
       ),
       body: DropTarget(
         onDragDone: _handleDragDone,
@@ -1290,15 +1443,33 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       itemCount: _objects.length,
       itemBuilder: (context, index) {
         final object = _objects[index];
+        final isSelected = _selectedItems.contains(object.key);
+        final canSelect = !object.isDirectory;
+
         return ListTile(
-          leading: Icon(
-            object.isDirectory ? Icons.folder : Icons.insert_drive_file,
-            color: object.isDirectory
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
+          leading: _isSelectionMode
+              ? Checkbox(
+                  value: isSelected,
+                  onChanged: canSelect
+                      ? (value) {
+                          setState(() {
+                            if (value == true) {
+                              _selectedItems.add(object.key);
+                            } else {
+                              _selectedItems.remove(object.key);
+                            }
+                          });
+                        }
+                      : null,
+                )
+              : Icon(
+                  object.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                  color: object.isDirectory
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
           title: Text(
             object.key.startsWith(_currentPrefix)
                 ? object.key.substring(_currentPrefix.length)

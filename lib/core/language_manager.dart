@@ -192,6 +192,54 @@ class LanguageManager extends ChangeNotifier {
       'download_complete': '下载完成',
       'open': '打开',
       'downloading_file': '正在下载 %s...',
+      'server_saved': '服务器已保存',
+
+      // R2 Test Page
+      'r2_test_title': 'R2 连接测试',
+      'test_connection_btn': '测试连接',
+      'testing_connection': '正在测试连接...',
+      'config_issues': '=== 配置问题 ===',
+      'connection_info': '=== 连接信息 ===',
+      'r2_endpoint_formats': '=== R2 端点格式 ===',
+      'init_minio_client': '=== 初始化 MinIO 客户端 ===',
+      'minio_client_init_success': '✓ MinIO 客户端初始化成功',
+      'test_list_buckets': '=== 测试列出存储桶 ===',
+      'list_buckets_success': '✓ 列出存储桶成功',
+      'found_buckets': '找到 %s 个存储桶',
+      'list_buckets_failed': '✗ 列出存储桶失败：%s',
+      'r2_list_buckets_note': '  这对 R2 来说是正常的 - 它不支持 list_buckets 操作',
+      'test_list_objects': '=== 测试列出对象 ===',
+      'list_objects_success': '✓ 列出对象成功',
+      'found_objects': '找到 %s 个结果',
+      'objects_prefixes_count': '对象：%s，前缀：%s',
+      'list_objects_failed': '✗ 列出对象失败：%s',
+      'possible_issues': '可能的问题：',
+      'issue_check_url': '1. 检查 R2 端点 URL 是否正确',
+      'issue_check_creds': '2. 验证您的访问凭据',
+      'issue_check_bucket': '3. 确确保存储桶存在',
+      'issue_check_network': '4. 检查网络连接',
+      'test_complete': '=== 测试完成 ===',
+      'unexpected_error': '✗ 意外错误：%s',
+      'error_type': '错误类型：%s',
+
+      // S3 Browser Page New
+      'create_folder_title': '创建文件夹',
+      'folder_name_hint': '输入文件夹名称（例如：my-folder）',
+      'create_btn': '创建',
+      'folder_create_success': '已创建文件夹：%s',
+      'folder_create_failed': '创建文件夹失败：%s',
+      'batch_download_success': '已下载 %s 个文件',
+      'batch_delete_confirm_msg': '确定要删除 %s 个项目吗？',
+      'batch_delete_result': '已删除 %s 个文件，失败 %s 个',
+
+      'batch_delete_result_success': '已删除 %s 个文件',
+
+      // R2 Connection Helper
+      'r2_validation_endpoint': '端点似乎不是 Cloudflare R2 URL',
+      'r2_validation_ak': '需要访问密钥 ID',
+      'r2_validation_sk': '需要秘密访问密钥',
+      'r2_validation_bucket': '需要存储桶名称',
+      'r2_validation_scheme': 'URL 必须包含 http:// 或 https://',
     },
     AppLanguage.english: {
       // Common
@@ -329,6 +377,56 @@ class LanguageManager extends ChangeNotifier {
       'download_complete': 'Download Complete',
       'open': 'Open',
       'downloading_file': 'Downloading %s...',
+      'server_saved': 'Server saved successfully',
+
+      // R2 Test Page
+      'r2_test_title': 'R2 Connection Test',
+      'test_connection_btn': 'Test Connection',
+      'testing_connection': 'Testing connection...',
+      'config_issues': '=== Configuration Issues ===',
+      'connection_info': '=== Connection Info ===',
+      'r2_endpoint_formats': '=== R2 Endpoint Formats ===',
+      'init_minio_client': '=== Initializing MinIO Client ===',
+      'minio_client_init_success': '✓ MinIO client initialized successfully',
+      'test_list_buckets': '=== Testing List Buckets ===',
+      'list_buckets_success': '✓ List buckets succeeded',
+      'found_buckets': 'Found %s bucket(s)',
+      'list_buckets_failed': '✗ List buckets failed: %s',
+      'r2_list_buckets_note':
+          '  This is normal for R2 - it doesn\'t support list_buckets operation',
+      'test_list_objects': '=== Testing List Objects ===',
+      'list_objects_success': '✓ List objects succeeded',
+      'found_objects': 'Found %s result(s)',
+      'objects_prefixes_count': 'Objects: %s, Prefixes: %s',
+      'list_objects_failed': '✗ List objects failed: %s',
+      'possible_issues': 'Possible issues:',
+      'issue_check_url': '1. Check if the R2 endpoint URL is correct',
+      'issue_check_creds': '2. Verify your access credentials',
+      'issue_check_bucket': '3. Ensure the bucket exists',
+      'issue_check_network': '4. Check your network connection',
+      'test_complete': '=== Test Complete ===',
+      'unexpected_error': '✗ Unexpected error: %s',
+      'error_type': 'Error Type: %s',
+
+      // S3 Browser Page New
+      'create_folder_title': 'Create Folder',
+      'folder_name_hint': 'Enter folder name (e.g., my-folder)',
+      'create_btn': 'Create',
+      'folder_create_success': 'Created folder: %s',
+      'folder_create_failed': 'Failed to create folder: %s',
+      'batch_download_success': 'Downloaded %s files',
+      'batch_delete_confirm_msg': 'Are you sure you want to delete %s items?',
+      'batch_delete_result': 'Deleted %s files, failed %s',
+
+      'batch_delete_result_success': 'Deleted %s files',
+
+      // R2 Connection Helper
+      'r2_validation_endpoint':
+          'Endpoint does not appear to be a Cloudflare R2 URL',
+      'r2_validation_ak': 'Access Key ID is required',
+      'r2_validation_sk': 'Secret Access Key is required',
+      'r2_validation_bucket': 'Bucket name is required',
+      'r2_validation_scheme': 'URL must include http:// or https://',
     },
   };
 }

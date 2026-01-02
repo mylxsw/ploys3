@@ -83,8 +83,16 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
 
       await prefs.setStringList('server_configs', serverConfigs);
 
-      widget.onSave();
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.loc('server_saved')),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        widget.onSave();
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -183,11 +191,13 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                                     context.loc('region'),
                                     _regionController,
                                     context.loc('region_hint'),
+                                    isOptional: true,
                                   ),
                                   _buildTextFormField(
                                     context.loc('cdn_url'),
                                     _cdnUrlController,
                                     context.loc('cdn_hint'),
+                                    isOptional: true,
                                   ),
                                 ],
                               ),
@@ -233,6 +243,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
     TextEditingController controller,
     String hintText, {
     bool obscureText = false,
+    bool isOptional = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -263,7 +274,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
         ),
         validator: (value) {
           // Skip validation for optional fields
-          if (label.contains('Optional') || label.contains('可选')) {
+          if (isOptional) {
             return null;
           }
           if (value == null || value.isEmpty) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/r2_connection_helper.dart';
 import 'package:s3_ui/core/design_system.dart';
+import 'package:s3_ui/core/localization.dart';
 
 class R2TestPage extends StatefulWidget {
   final S3ServerConfig serverConfig;
@@ -19,7 +20,7 @@ class _R2TestPageState extends State<R2TestPage> {
   Future<void> _testConnection() async {
     setState(() {
       _isTesting = true;
-      _testResults = 'Testing connection...\n\n';
+      _testResults = '${context.loc('testing_connection')}\n\n';
     });
 
     try {
@@ -28,7 +29,7 @@ class _R2TestPageState extends State<R2TestPage> {
         widget.serverConfig,
       );
       if (validationIssues.isNotEmpty) {
-        _testResults += '=== Configuration Issues ===\n';
+        _testResults += '${context.loc('config_issues')}\n';
         for (final issue in validationIssues) {
           _testResults += '⚠ $issue\n';
         }
@@ -44,7 +45,7 @@ class _R2TestPageState extends State<R2TestPage> {
           widget.serverConfig.region ?? (isR2 ? 'auto' : 'us-east-1');
 
       // Test 1: Basic connection info
-      _testResults += '=== Connection Info ===\n';
+      _testResults += '${context.loc('connection_info')}\n';
       _testResults += 'Endpoint: ${widget.serverConfig.address}\n';
       _testResults += 'Parsed Host: $endPoint\n';
       _testResults += 'Port: $port\n';
@@ -56,7 +57,7 @@ class _R2TestPageState extends State<R2TestPage> {
 
       // Show R2 endpoint format examples if it's R2
       if (isR2) {
-        _testResults += '=== R2 Endpoint Formats ===\n';
+        _testResults += '${context.loc('r2_endpoint_formats')}\n';
         final formats = R2ConnectionHelper.getR2EndpointFormats(
           endPoint.split('.')[0], // Extract account ID
           widget.serverConfig.bucket,
@@ -68,34 +69,36 @@ class _R2TestPageState extends State<R2TestPage> {
       }
 
       // Test 2: Try to initialize MinIO client
-      _testResults += '=== Initializing MinIO Client ===\n';
+      _testResults += '${context.loc('init_minio_client')}\n';
       final minioClient = R2ConnectionHelper.createR2Client(
         widget.serverConfig,
       );
-      _testResults += '✓ MinIO client initialized successfully\n\n';
+      _testResults += '${context.loc('minio_client_init_success')}\n\n';
 
       // Test 3: Try to list buckets (R2 might not support this)
-      _testResults += '=== Testing List Buckets ===\n';
+      _testResults += '${context.loc('test_list_buckets')}\n';
       try {
         final buckets = await minioClient.listBuckets();
-        _testResults += '✓ List buckets succeeded\n';
-        _testResults += 'Found ${buckets.length} bucket(s)\n';
+        _testResults += '${context.loc('list_buckets_success')}\n';
+        _testResults +=
+            '${context.loc('found_buckets', [buckets.length.toString()])}\n';
         for (final bucket in buckets) {
           _testResults +=
               '  - ${bucket.name} (Created: ${bucket.creationDate})\n';
         }
       } catch (e) {
-        _testResults += '✗ List buckets failed: $e\n';
         _testResults +=
-            '  This is normal for R2 - it doesn\'t support list_buckets operation\n\n';
+            '${context.loc('list_buckets_failed', [e.toString()])}\n';
+        _testResults += '${context.loc('r2_list_buckets_note')}\n\n';
 
         // Test 4: Try to list objects in the specified bucket
-        _testResults += '=== Testing List Objects ===\n';
+        _testResults += '${context.loc('test_list_objects')}\n';
         try {
           final stream = minioClient.listObjects(widget.serverConfig.bucket);
           final results = await stream.toList();
-          _testResults += '✓ List objects succeeded\n';
-          _testResults += 'Found ${results.length} result(s)\n';
+          _testResults += '${context.loc('list_objects_success')}\n';
+          _testResults +=
+              '${context.loc('found_objects', [results.length.toString()])}\n';
 
           int objectCount = 0;
           int prefixCount = 0;
@@ -103,25 +106,28 @@ class _R2TestPageState extends State<R2TestPage> {
             objectCount += result.objects.length;
             prefixCount += result.prefixes.length;
           }
-          _testResults += 'Objects: $objectCount, Prefixes: $prefixCount\n';
+          _testResults +=
+              '${context.loc('objects_prefixes_count', [objectCount.toString(), prefixCount.toString()])}\n';
         } catch (e) {
-          _testResults += '✗ List objects failed: $e\n';
+          _testResults +=
+              '${context.loc('list_objects_failed', [e.toString()])}\n';
 
           // Check for specific R2 errors
           if (e.toString().contains('Connection failed')) {
-            _testResults += '\nPossible issues:\n';
-            _testResults += '1. Check if the R2 endpoint URL is correct\n';
-            _testResults += '2. Verify your access credentials\n';
-            _testResults += '3. Ensure the bucket exists\n';
-            _testResults += '4. Check your network connection\n';
+            _testResults += '\n${context.loc('possible_issues')}\n';
+            _testResults += '${context.loc('issue_check_url')}\n';
+            _testResults += '${context.loc('issue_check_creds')}\n';
+            _testResults += '${context.loc('issue_check_bucket')}\n';
+            _testResults += '${context.loc('issue_check_network')}\n';
           }
         }
       }
 
-      _testResults += '\n=== Test Complete ===\n';
+      _testResults += '\n${context.loc('test_complete')}\n';
     } catch (e) {
-      _testResults += '\n✗ Unexpected error: $e\n';
-      _testResults += 'Error Type: ${e.runtimeType}\n';
+      _testResults += '\n${context.loc('unexpected_error', [e.toString()])}\n';
+      _testResults +=
+          '${context.loc('error_type', [e.runtimeType.toString()])}\n';
     }
 
     setState(() {
@@ -133,7 +139,7 @@ class _R2TestPageState extends State<R2TestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('R2 Connection Test'),
+        title: Text(context.loc('r2_test_title')),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       body: Column(
@@ -142,7 +148,11 @@ class _R2TestPageState extends State<R2TestPage> {
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: _isTesting ? null : _testConnection,
-              child: Text(_isTesting ? 'Testing...' : 'Test Connection'),
+              child: Text(
+                _isTesting
+                    ? context.loc('testing_connection')
+                    : context.loc('test_connection_btn'),
+              ),
             ),
           ),
           Expanded(

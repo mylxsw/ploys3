@@ -819,12 +819,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final bool? confirmed = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create Folder'),
+        title: Text(context.loc('create_folder_title')),
         content: TextField(
           controller: folderNameController,
-          decoration: const InputDecoration(
-            labelText: 'Folder name',
-            hintText: 'Enter folder name (e.g., my-folder)',
+          decoration: InputDecoration(
+            labelText: context.loc('folder_name'),
+            hintText: context.loc('folder_name_hint'),
           ),
           autofocus: true,
           onSubmitted: (value) {
@@ -836,7 +836,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.loc('cancel')),
           ),
           TextButton(
             onPressed: () {
@@ -844,7 +844,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 Navigator.pop(context, true);
               }
             },
-            child: const Text('Create'),
+            child: Text(context.loc('create_btn')),
           ),
         ],
       ),
@@ -880,7 +880,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Created folder: ${folderName.replaceAll('/', '')}'),
+            content: Text(
+              context.loc('folder_create_success', [
+                folderName.replaceAll('/', ''),
+              ]),
+            ),
           ),
         );
         // Clear cache and refresh to show the new folder
@@ -891,7 +895,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create folder: $e'),
+            content: Text(context.loc('folder_create_failed', [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -914,7 +918,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Downloaded ${_selectedItems.length} files')),
+        SnackBar(
+          content: Text(
+            context.loc('batch_download_success', [
+              _selectedItems.length.toString(),
+            ]),
+          ),
+        ),
       );
       setState(() {
         _isSelectionMode = false;
@@ -931,7 +941,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       builder: (context) => AlertDialog(
         title: Text(context.loc('confirm_delete')),
         content: Text(
-          'Are you sure you want to delete ${_selectedItems.length} items?',
+          context.loc('batch_delete_confirm_msg', [
+            _selectedItems.length.toString(),
+          ]),
         ),
         actions: [
           TextButton(
@@ -972,8 +984,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         SnackBar(
           content: Text(
             failCount > 0
-                ? 'Deleted $successCount files, failed $failCount'
-                : 'Deleted $successCount files',
+                ? context.loc('batch_delete_result', [
+                    successCount.toString(),
+                    failCount.toString(),
+                  ])
+                : context.loc('batch_delete_result_success', [
+                    successCount.toString(),
+                  ]),
           ),
         ),
       );

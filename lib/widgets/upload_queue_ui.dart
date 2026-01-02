@@ -157,7 +157,7 @@ class _UploadQueueUIState extends State<UploadQueueUI> {
                 ),
                 subtitle: item.status == UploadStatus.failed
                     ? Text(
-                        item.errorMessage ?? 'Error',
+                        item.errorMessage ?? context.loc('error'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                           fontSize: AppFontSizes.sm,

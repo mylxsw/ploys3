@@ -167,7 +167,7 @@ class _DownloadQueueUIState extends State<DownloadQueueUI> {
                 ),
                 subtitle: item.status == DownloadStatus.failed
                     ? Text(
-                        item.errorMessage ?? 'Error',
+                        item.errorMessage ?? context.loc('error'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                           fontSize: AppFontSizes.sm,

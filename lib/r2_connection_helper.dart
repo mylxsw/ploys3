@@ -1,5 +1,6 @@
 import 'package:minio/minio.dart' as minio;
 import 'package:s3_ui/models/s3_server_config.dart';
+import 'package:s3_ui/core/language_manager.dart';
 
 class R2ConnectionHelper {
   /// Creates a properly configured MinIO client for Cloudflare R2
@@ -57,7 +58,10 @@ class R2ConnectionHelper {
   }
 
   /// Tests different R2 endpoint formats
-  static Map<String, String> getR2EndpointFormats(String accountId, String bucketName) {
+  static Map<String, String> getR2EndpointFormats(
+    String accountId,
+    String bucketName,
+  ) {
     return {
       'Format 1': 'https://$accountId.r2.cloudflarestorage.com',
       'Format 2': 'https://$accountId.r2.cloudflarestorage.com/$bucketName',
@@ -69,27 +73,28 @@ class R2ConnectionHelper {
   /// Validates R2 configuration
   static List<String> validateR2Config(S3ServerConfig config) {
     final issues = <String>[];
+    final lang = LanguageManager.instance;
 
     if (!config.address.contains('r2.cloudflarestorage.com')) {
-      issues.add('Endpoint does not appear to be a Cloudflare R2 URL');
+      issues.add(lang.getLocalized('r2_validation_endpoint'));
     }
 
     if (config.accessKeyId.isEmpty) {
-      issues.add('Access Key ID is required');
+      issues.add(lang.getLocalized('r2_validation_ak'));
     }
 
     if (config.secretAccessKey.isEmpty) {
-      issues.add('Secret Access Key is required');
+      issues.add(lang.getLocalized('r2_validation_sk'));
     }
 
     if (config.bucket.isEmpty) {
-      issues.add('Bucket name is required');
+      issues.add(lang.getLocalized('r2_validation_bucket'));
     }
 
     // Check for common R2 URL format issues
     final uri = Uri.parse(config.address);
     if (!uri.hasScheme) {
-      issues.add('URL must include http:// or https://');
+      issues.add(lang.getLocalized('r2_validation_scheme'));
     }
 
     return issues;

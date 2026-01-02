@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:s3_ui/core/design_system.dart';
 import 'package:s3_ui/core/localization.dart';
 import 'package:s3_ui/core/upload_manager.dart';
 
@@ -152,14 +153,14 @@ class _UploadQueueUIState extends State<UploadQueueUI> {
                   item.fileName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: AppFontSizes.md),
                 ),
                 subtitle: item.status == UploadStatus.failed
                     ? Text(
                         item.errorMessage ?? 'Error',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
+                          fontSize: AppFontSizes.sm,
                         ),
                       )
                     : item.status == UploadStatus.uploading

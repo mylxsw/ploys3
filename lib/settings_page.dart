@@ -178,7 +178,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   Text(
                                     context.loc('language'),
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: AppFontSizes.lg,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -186,7 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   Text(
                                     _selectedLanguage.displayName,
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: AppFontSizes.md,
                                       color: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.color,
@@ -242,7 +242,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   Text(
                                     context.loc('version'),
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: AppFontSizes.lg,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -250,7 +250,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   Text(
                                     '1.0.0',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: AppFontSizes.md,
                                       color: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.color,
@@ -310,7 +310,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: AppFontSizes.lg,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -318,7 +318,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppFontSizes.md,
                     color: Theme.of(context).textTheme.bodySmall?.color,
                   ),
                 ),

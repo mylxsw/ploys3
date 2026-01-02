@@ -279,7 +279,7 @@ class _AppShellState extends State<AppShell> {
                                             children: [
                                               Container(
                                                 padding: const EdgeInsets.all(
-                                                  8,
+                                                  10,
                                                 ),
                                                 decoration: BoxDecoration(
                                                   gradient: LinearGradient(
@@ -310,7 +310,7 @@ class _AppShellState extends State<AppShell> {
                                                     context.loc('app_name_s3'),
                                                     style: Theme.of(context)
                                                         .textTheme
-                                                        .titleMedium
+                                                        .titleSmall
                                                         ?.copyWith(
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -327,7 +327,8 @@ class _AppShellState extends State<AppShell> {
                                                         .textTheme
                                                         .labelSmall
                                                         ?.copyWith(
-                                                          fontSize: 8,
+                                                          fontSize:
+                                                              AppFontSizes.xs,
                                                           letterSpacing: 2,
                                                           color:
                                                               Theme.of(context)
@@ -644,7 +645,7 @@ class _AppShellState extends State<AppShell> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontSize: 13,
+                                          fontSize: AppFontSizes.md - 1,
                                           fontWeight: isSelected
                                               ? FontWeight.w600
                                               : FontWeight.normal,

@@ -33,7 +33,7 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: Color(0xFFE4E4E7),
-          fontSize: 20,
+          fontSize: AppFontSizes.xxl,
           fontWeight: FontWeight.w600,
         ),
         iconTheme: IconThemeData(color: Color(0xFFA1A1AA)),
@@ -42,60 +42,69 @@ class AppTheme {
       // Text 主题
       textTheme: const TextTheme(
         displayLarge: TextStyle(
-          fontSize: 32,
+          fontSize: AppFontSizes.display,
           fontWeight: FontWeight.bold,
           color: Color(0xFFE4E4E7),
         ),
         displayMedium: TextStyle(
-          fontSize: 24,
+          fontSize: AppFontSizes.xxxl,
           fontWeight: FontWeight.bold,
           color: Color(0xFFE4E4E7),
         ),
         displaySmall: TextStyle(
-          fontSize: 20,
+          fontSize: AppFontSizes.xxl,
           fontWeight: FontWeight.bold,
           color: Color(0xFFE4E4E7),
         ),
         headlineMedium: TextStyle(
-          fontSize: 18,
+          fontSize: AppFontSizes.xl,
           fontWeight: FontWeight.w600,
           color: Color(0xFFE4E4E7),
         ),
         headlineSmall: TextStyle(
-          fontSize: 16,
+          fontSize: AppFontSizes.lg,
           fontWeight: FontWeight.w600,
           color: Color(0xFFE4E4E7),
         ),
         titleLarge: TextStyle(
-          fontSize: 18,
+          fontSize: AppFontSizes.xl,
           fontWeight: FontWeight.w600,
           color: Color(0xFFE4E4E7),
         ),
         titleMedium: TextStyle(
-          fontSize: 16,
+          fontSize: AppFontSizes.lg,
           fontWeight: FontWeight.w500,
           color: Color(0xFFE4E4E7),
         ),
         titleSmall: TextStyle(
-          fontSize: 14,
+          fontSize: AppFontSizes.md,
           fontWeight: FontWeight.w500,
           color: Color(0xFFE4E4E7),
         ),
-        bodyLarge: TextStyle(fontSize: 16, color: Color(0xFFE4E4E7)),
-        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFFA1A1AA)),
-        bodySmall: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
+        bodyLarge: TextStyle(
+          fontSize: AppFontSizes.lg,
+          color: Color(0xFFE4E4E7),
+        ),
+        bodyMedium: TextStyle(
+          fontSize: AppFontSizes.md,
+          color: Color(0xFFA1A1AA),
+        ),
+        bodySmall: TextStyle(
+          fontSize: AppFontSizes.sm,
+          color: Color(0xFF71717A),
+        ),
         labelLarge: TextStyle(
-          fontSize: 14,
+          fontSize: AppFontSizes.md,
           fontWeight: FontWeight.w500,
           color: Color(0xFFE4E4E7),
         ),
         labelMedium: TextStyle(
-          fontSize: 12,
+          fontSize: AppFontSizes.sm,
           fontWeight: FontWeight.w500,
           color: Color(0xFFE4E4E7),
         ),
         labelSmall: TextStyle(
-          fontSize: 10,
+          fontSize: AppFontSizes.xs,
           fontWeight: FontWeight.w500,
           color: Color(0xFFE4E4E7),
         ),
@@ -129,7 +138,10 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(
+            fontSize: AppFontSizes.md,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -138,7 +150,10 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(
+            fontSize: AppFontSizes.md,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -207,7 +222,7 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: Color(0xFF1F2937),
-          fontSize: 20,
+          fontSize: AppFontSizes.xxl,
           fontWeight: FontWeight.w600,
         ),
         iconTheme: IconThemeData(color: Color(0xFF6B7280)),
@@ -216,60 +231,69 @@ class AppTheme {
       // Text 主题
       textTheme: const TextTheme(
         displayLarge: TextStyle(
-          fontSize: 32,
+          fontSize: AppFontSizes.display,
           fontWeight: FontWeight.bold,
           color: Color(0xFF1F2937),
         ),
         displayMedium: TextStyle(
-          fontSize: 24,
+          fontSize: AppFontSizes.xxxl,
           fontWeight: FontWeight.bold,
           color: Color(0xFF1F2937),
         ),
         displaySmall: TextStyle(
-          fontSize: 20,
+          fontSize: AppFontSizes.xxl,
           fontWeight: FontWeight.bold,
           color: Color(0xFF1F2937),
         ),
         headlineMedium: TextStyle(
-          fontSize: 18,
+          fontSize: AppFontSizes.xl,
           fontWeight: FontWeight.w600,
           color: Color(0xFF1F2937),
         ),
         headlineSmall: TextStyle(
-          fontSize: 16,
+          fontSize: AppFontSizes.lg,
           fontWeight: FontWeight.w600,
           color: Color(0xFF1F2937),
         ),
         titleLarge: TextStyle(
-          fontSize: 18,
+          fontSize: AppFontSizes.xl,
           fontWeight: FontWeight.w600,
           color: Color(0xFF1F2937),
         ),
         titleMedium: TextStyle(
-          fontSize: 16,
+          fontSize: AppFontSizes.lg,
           fontWeight: FontWeight.w500,
           color: Color(0xFF1F2937),
         ),
         titleSmall: TextStyle(
-          fontSize: 14,
+          fontSize: AppFontSizes.md,
           fontWeight: FontWeight.w500,
           color: Color(0xFF1F2937),
         ),
-        bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
-        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
-        bodySmall: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+        bodyLarge: TextStyle(
+          fontSize: AppFontSizes.lg,
+          color: Color(0xFF1F2937),
+        ),
+        bodyMedium: TextStyle(
+          fontSize: AppFontSizes.md,
+          color: Color(0xFF6B7280),
+        ),
+        bodySmall: TextStyle(
+          fontSize: AppFontSizes.sm,
+          color: Color(0xFF9CA3AF),
+        ),
         labelLarge: TextStyle(
-          fontSize: 14,
+          fontSize: AppFontSizes.md,
           fontWeight: FontWeight.w500,
           color: Color(0xFF1F2937),
         ),
         labelMedium: TextStyle(
-          fontSize: 12,
+          fontSize: AppFontSizes.sm,
           fontWeight: FontWeight.w500,
           color: Color(0xFF1F2937),
         ),
         labelSmall: TextStyle(
-          fontSize: 10,
+          fontSize: AppFontSizes.xs,
           fontWeight: FontWeight.w500,
           color: Color(0xFF1F2937),
         ),
@@ -303,7 +327,10 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(
+            fontSize: AppFontSizes.md,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -312,7 +339,10 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: const TextStyle(
+            fontSize: AppFontSizes.md,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -446,7 +476,7 @@ class AppComponents {
           const CircularProgressIndicator(strokeWidth: 3),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(message, style: const TextStyle(fontSize: 14)),
+            Text(message, style: const TextStyle(fontSize: AppFontSizes.md)),
           ],
         ],
       ),
@@ -473,14 +503,17 @@ class AppComponents {
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: AppFontSizes.xxl,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppFontSizes.md,
                 color: Colors.grey.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
@@ -522,4 +555,16 @@ class AppAnimation {
   static const Duration slow = Duration(milliseconds: 350);
 
   static Curve get curve => Curves.easeInOutCubic;
+}
+
+/// 字体大小常量
+class AppFontSizes {
+  static const double xs = 12.0;
+  static const double sm = 14.0;
+  static const double md = 16.0;
+  static const double lg = 18.0;
+  static const double xl = 20.0;
+  static const double xxl = 22.0;
+  static const double xxxl = 24.0;
+  static const double display = 32.0;
 }

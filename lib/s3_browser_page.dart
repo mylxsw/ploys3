@@ -13,6 +13,7 @@ import 'package:s3_ui/core/localization.dart';
 import 'package:s3_ui/core/upload_manager.dart';
 import 'package:s3_ui/widgets/upload_queue_ui.dart';
 import 'package:s3_ui/widgets/download_queue_ui.dart';
+import 'package:s3_ui/core/design_system.dart';
 
 /// Represents an S3 object or directory prefix
 class S3Item {
@@ -1408,7 +1409,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                           'Drop files here to upload',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
-                            fontSize: 18,
+                            fontSize: AppFontSizes.xl,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1963,7 +1964,7 @@ class _PreviewDialogState extends State<_PreviewDialog> {
                 'Preview not available for this file type',
                 style: TextStyle(
                   color: textColor.withValues(alpha: 0.5),
-                  fontSize: 12,
+                  fontSize: AppFontSizes.sm,
                 ),
               ),
             ],
@@ -2033,7 +2034,7 @@ class _PreviewDialogState extends State<_PreviewDialog> {
               'Failed to load image preview',
               style: TextStyle(
                 color: textColor.withValues(alpha: 0.5),
-                fontSize: 12,
+                fontSize: AppFontSizes.sm,
               ),
             ),
           ],

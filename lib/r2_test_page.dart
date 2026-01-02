@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/r2_connection_helper.dart';
+import 'package:s3_ui/core/design_system.dart';
 
 class R2TestPage extends StatefulWidget {
   final S3ServerConfig serverConfig;
@@ -23,7 +24,9 @@ class _R2TestPageState extends State<R2TestPage> {
 
     try {
       // First validate the configuration
-      final validationIssues = R2ConnectionHelper.validateR2Config(widget.serverConfig);
+      final validationIssues = R2ConnectionHelper.validateR2Config(
+        widget.serverConfig,
+      );
       if (validationIssues.isNotEmpty) {
         _testResults += '=== Configuration Issues ===\n';
         for (final issue in validationIssues) {
@@ -37,7 +40,8 @@ class _R2TestPageState extends State<R2TestPage> {
       final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
       final useSSL = uri.scheme == 'https';
       final isR2 = endPoint.contains('r2.cloudflarestorage.com');
-      final region = widget.serverConfig.region ?? (isR2 ? 'auto' : 'us-east-1');
+      final region =
+          widget.serverConfig.region ?? (isR2 ? 'auto' : 'us-east-1');
 
       // Test 1: Basic connection info
       _testResults += '=== Connection Info ===\n';
@@ -47,7 +51,8 @@ class _R2TestPageState extends State<R2TestPage> {
       _testResults += 'SSL: $useSSL\n';
       _testResults += 'Region: $region\n';
       _testResults += 'Bucket: ${widget.serverConfig.bucket}\n';
-      _testResults += 'Access Key: ${widget.serverConfig.accessKeyId.substring(0, 5)}...\n\n';
+      _testResults +=
+          'Access Key: ${widget.serverConfig.accessKeyId.substring(0, 5)}...\n\n';
 
       // Show R2 endpoint format examples if it's R2
       if (isR2) {
@@ -64,7 +69,9 @@ class _R2TestPageState extends State<R2TestPage> {
 
       // Test 2: Try to initialize MinIO client
       _testResults += '=== Initializing MinIO Client ===\n';
-      final minioClient = R2ConnectionHelper.createR2Client(widget.serverConfig);
+      final minioClient = R2ConnectionHelper.createR2Client(
+        widget.serverConfig,
+      );
       _testResults += '✓ MinIO client initialized successfully\n\n';
 
       // Test 3: Try to list buckets (R2 might not support this)
@@ -74,11 +81,13 @@ class _R2TestPageState extends State<R2TestPage> {
         _testResults += '✓ List buckets succeeded\n';
         _testResults += 'Found ${buckets.length} bucket(s)\n';
         for (final bucket in buckets) {
-          _testResults += '  - ${bucket.name} (Created: ${bucket.creationDate})\n';
+          _testResults +=
+              '  - ${bucket.name} (Created: ${bucket.creationDate})\n';
         }
       } catch (e) {
         _testResults += '✗ List buckets failed: $e\n';
-        _testResults += '  This is normal for R2 - it doesn\'t support list_buckets operation\n\n';
+        _testResults +=
+            '  This is normal for R2 - it doesn\'t support list_buckets operation\n\n';
 
         // Test 4: Try to list objects in the specified bucket
         _testResults += '=== Testing List Objects ===\n';
@@ -149,7 +158,10 @@ class _R2TestPageState extends State<R2TestPage> {
               child: SingleChildScrollView(
                 child: SelectableText(
                   _testResults,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: AppFontSizes.sm,
+                  ),
                 ),
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/core/localization.dart';
+import 'package:s3_ui/core/design_system.dart';
 
 import 'package:s3_ui/widgets/window_title_bar.dart';
 
@@ -238,9 +239,17 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
       child: TextFormField(
         controller: controller,
         obscureText: obscureText,
+        style: const TextStyle(fontSize: AppFontSizes.md),
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          labelStyle: const TextStyle(fontSize: AppFontSizes.md),
+          hintStyle: const TextStyle(fontSize: AppFontSizes.md),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(
@@ -253,6 +262,10 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         validator: (value) {
+          // Skip validation for optional fields
+          if (label.contains('Optional') || label.contains('可选')) {
+            return null;
+          }
           if (value == null || value.isEmpty) {
             return context.loc('validation_required', [label]);
           }

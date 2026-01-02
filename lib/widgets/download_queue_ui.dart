@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:s3_ui/core/localization.dart';
 import 'package:s3_ui/download_manager.dart';
+import 'package:s3_ui/core/design_system.dart';
 import 'package:path/path.dart' as path;
 
 class DownloadQueueUI extends StatefulWidget {
@@ -162,14 +163,14 @@ class _DownloadQueueUIState extends State<DownloadQueueUI> {
                   item.fileName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: AppFontSizes.md),
                 ),
                 subtitle: item.status == DownloadStatus.failed
                     ? Text(
                         item.errorMessage ?? 'Error',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
+                          fontSize: AppFontSizes.sm,
                         ),
                       )
                     : item.status == DownloadStatus.downloading

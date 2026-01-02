@@ -301,10 +301,64 @@ class _AppShellState extends State<AppShell> {
                                       onPressed: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(
-                                            builder: (context) => S3ConfigPage(
-                                              onSave: _loadConfigs,
+                                          PageRouteBuilder(
+                                            pageBuilder:
+                                                (
+                                                  context,
+                                                  animation,
+                                                  secondaryAnimation,
+                                                ) => S3ConfigPage(
+                                                  onSave: _loadConfigs,
+                                                ),
+                                            transitionsBuilder:
+                                                (
+                                                  context,
+                                                  animation,
+                                                  secondaryAnimation,
+                                                  child,
+                                                ) {
+                                                  const curve =
+                                                      Curves.easeOutQuart;
+
+                                                  var scaleAnimation =
+                                                      Tween(
+                                                        begin: 0.0,
+                                                        end: 1.0,
+                                                      ).animate(
+                                                        CurvedAnimation(
+                                                          parent: animation,
+                                                          curve: curve,
+                                                        ),
+                                                      );
+
+                                                  var fadeAnimation =
+                                                      Tween(
+                                                        begin: 0.0,
+                                                        end: 1.0,
+                                                      ).animate(
+                                                        CurvedAnimation(
+                                                          parent: animation,
+                                                          curve: curve,
+                                                        ),
+                                                      );
+
+                                                  return ScaleTransition(
+                                                    scale: scaleAnimation,
+                                                    alignment:
+                                                        Alignment.topLeft,
+                                                    child: FadeTransition(
+                                                      opacity: fadeAnimation,
+                                                      child: child,
+                                                    ),
+                                                  );
+                                                },
+                                            transitionDuration: const Duration(
+                                              milliseconds: 400,
                                             ),
+                                            reverseTransitionDuration:
+                                                const Duration(
+                                                  milliseconds: 300,
+                                                ),
                                           ),
                                         );
                                       },
@@ -332,10 +386,67 @@ class _AppShellState extends State<AppShell> {
                                             onTap: () {
                                               Navigator.push(
                                                 context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      S3ConfigPage(
+                                                PageRouteBuilder(
+                                                  pageBuilder:
+                                                      (
+                                                        context,
+                                                        animation,
+                                                        secondaryAnimation,
+                                                      ) => S3ConfigPage(
                                                         onSave: _loadConfigs,
+                                                      ),
+                                                  transitionsBuilder:
+                                                      (
+                                                        context,
+                                                        animation,
+                                                        secondaryAnimation,
+                                                        child,
+                                                      ) {
+                                                        const curve =
+                                                            Curves.easeOutQuart;
+
+                                                        var scaleAnimation =
+                                                            Tween(
+                                                              begin: 0.0,
+                                                              end: 1.0,
+                                                            ).animate(
+                                                              CurvedAnimation(
+                                                                parent:
+                                                                    animation,
+                                                                curve: curve,
+                                                              ),
+                                                            );
+
+                                                        var fadeAnimation =
+                                                            Tween(
+                                                              begin: 0.0,
+                                                              end: 1.0,
+                                                            ).animate(
+                                                              CurvedAnimation(
+                                                                parent:
+                                                                    animation,
+                                                                curve: curve,
+                                                              ),
+                                                            );
+
+                                                        return ScaleTransition(
+                                                          scale: scaleAnimation,
+                                                          alignment:
+                                                              Alignment.topLeft,
+                                                          child: FadeTransition(
+                                                            opacity:
+                                                                fadeAnimation,
+                                                            child: child,
+                                                          ),
+                                                        );
+                                                      },
+                                                  transitionDuration:
+                                                      const Duration(
+                                                        milliseconds: 400,
+                                                      ),
+                                                  reverseTransitionDuration:
+                                                      const Duration(
+                                                        milliseconds: 300,
                                                       ),
                                                 ),
                                               );
@@ -429,9 +540,65 @@ class _AppShellState extends State<AppShell> {
                                         onTap: () {
                                           Navigator.push(
                                             context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const SettingsPage(),
+                                            PageRouteBuilder(
+                                              pageBuilder:
+                                                  (
+                                                    context,
+                                                    animation,
+                                                    secondaryAnimation,
+                                                  ) => const SettingsPage(),
+                                              transitionsBuilder:
+                                                  (
+                                                    context,
+                                                    animation,
+                                                    secondaryAnimation,
+                                                    child,
+                                                  ) {
+                                                    const begin = 0.0;
+                                                    const end = 1.0;
+                                                    const curve =
+                                                        Curves.easeOutQuart;
+
+                                                    var scaleAnimation =
+                                                        Tween(
+                                                          begin: begin,
+                                                          end: end,
+                                                        ).animate(
+                                                          CurvedAnimation(
+                                                            parent: animation,
+                                                            curve: curve,
+                                                          ),
+                                                        );
+
+                                                    var fadeAnimation =
+                                                        Tween(
+                                                          begin: 0.0,
+                                                          end: 1.0,
+                                                        ).animate(
+                                                          CurvedAnimation(
+                                                            parent: animation,
+                                                            curve: curve,
+                                                          ),
+                                                        );
+
+                                                    return ScaleTransition(
+                                                      scale: scaleAnimation,
+                                                      alignment:
+                                                          Alignment.bottomLeft,
+                                                      child: FadeTransition(
+                                                        opacity: fadeAnimation,
+                                                        child: child,
+                                                      ),
+                                                    );
+                                                  },
+                                              transitionDuration:
+                                                  const Duration(
+                                                    milliseconds: 400,
+                                                  ),
+                                              reverseTransitionDuration:
+                                                  const Duration(
+                                                    milliseconds: 300,
+                                                  ),
                                             ),
                                           );
                                         },
@@ -562,10 +729,65 @@ class _AppShellState extends State<AppShell> {
                                         ? () {
                                             Navigator.push(
                                               context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    S3ConfigPage(
+                                              PageRouteBuilder(
+                                                pageBuilder:
+                                                    (
+                                                      context,
+                                                      animation,
+                                                      secondaryAnimation,
+                                                    ) => S3ConfigPage(
                                                       onSave: _loadConfigs,
+                                                    ),
+                                                transitionsBuilder:
+                                                    (
+                                                      context,
+                                                      animation,
+                                                      secondaryAnimation,
+                                                      child,
+                                                    ) {
+                                                      const curve =
+                                                          Curves.easeOutQuart;
+
+                                                      var scaleAnimation =
+                                                          Tween(
+                                                            begin: 0.0,
+                                                            end: 1.0,
+                                                          ).animate(
+                                                            CurvedAnimation(
+                                                              parent: animation,
+                                                              curve: curve,
+                                                            ),
+                                                          );
+
+                                                      var fadeAnimation =
+                                                          Tween(
+                                                            begin: 0.0,
+                                                            end: 1.0,
+                                                          ).animate(
+                                                            CurvedAnimation(
+                                                              parent: animation,
+                                                              curve: curve,
+                                                            ),
+                                                          );
+
+                                                      return ScaleTransition(
+                                                        scale: scaleAnimation,
+                                                        alignment:
+                                                            Alignment.topLeft,
+                                                        child: FadeTransition(
+                                                          opacity:
+                                                              fadeAnimation,
+                                                          child: child,
+                                                        ),
+                                                      );
+                                                    },
+                                                transitionDuration:
+                                                    const Duration(
+                                                      milliseconds: 400,
+                                                    ),
+                                                reverseTransitionDuration:
+                                                    const Duration(
+                                                      milliseconds: 300,
                                                     ),
                                               ),
                                             );

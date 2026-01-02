@@ -218,7 +218,7 @@ class _AppShellState extends State<AppShell> {
                                         ),
                                         // Collapse Button - Absolute Top Right
                                         Positioned(
-                                          top: 0,
+                                          top: 15,
                                           right: 4,
                                           child: IconButton(
                                             visualDensity:
@@ -246,7 +246,6 @@ class _AppShellState extends State<AppShell> {
                                   Container(
                                     height: 60,
                                     alignment: Alignment.center,
-                                    padding: const EdgeInsets.only(top: 12),
                                     child: IconButton(
                                       icon: Container(
                                         padding: const EdgeInsets.all(8),
@@ -347,7 +346,7 @@ class _AppShellState extends State<AppShell> {
                                 return NavigationRailDestination(
                                   icon: Icon(
                                     Icons.cloud_outlined,
-                                    size: 24,
+                                    size: 20,
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
@@ -355,7 +354,7 @@ class _AppShellState extends State<AppShell> {
                                   ),
                                   selectedIcon: Icon(
                                     Icons.cloud_done,
-                                    size: 24,
+                                    size: 20,
                                     color: Theme.of(
                                       context,
                                     ).colorScheme.primary,
@@ -386,8 +385,7 @@ class _AppShellState extends State<AppShell> {
                                     ),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                                    vertical: 6,
                                   ),
                                 );
                               }),
@@ -489,7 +487,7 @@ class _AppShellState extends State<AppShell> {
                               }
 
                               _sidebarWidth += details.delta.dx;
-                              if (_sidebarWidth < 180) _sidebarWidth = 180;
+                              if (_sidebarWidth < 200) _sidebarWidth = 200;
                               if (_sidebarWidth > 400) _sidebarWidth = 400;
                             });
                           },

@@ -929,6 +929,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.serverConfig.name),
+        backgroundColor: Colors.transparent,
         actions: [
           // View toggle button
           IconButton(
@@ -954,13 +955,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
           // Refresh button
           IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _isLoading || _isRefreshing
                 ? null
                 : () {

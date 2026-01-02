@@ -41,20 +41,64 @@ class AppTheme {
 
       // Text 主题
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
-        displayMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
-        displaySmall: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
-        headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
-        headlineSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        displayLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFFE4E4E7),
+        ),
+        displayMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFFE4E4E7),
+        ),
+        displaySmall: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFFE4E4E7),
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFFE4E4E7),
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFFE4E4E7),
+        ),
+        titleLarge: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFFE4E4E7),
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFE4E4E7),
+        ),
+        titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFE4E4E7),
+        ),
         bodyLarge: TextStyle(fontSize: 16, color: Color(0xFFE4E4E7)),
         bodyMedium: TextStyle(fontSize: 14, color: Color(0xFFA1A1AA)),
         bodySmall: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
-        labelSmall: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFE4E4E7),
+        ),
+        labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFE4E4E7),
+        ),
+        labelSmall: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFE4E4E7),
+        ),
       ),
 
       // 输入框主题
@@ -84,13 +128,8 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -98,13 +137,8 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -125,17 +159,12 @@ class AppTheme {
       ),
 
       // 图标主题
-      iconTheme: const IconThemeData(
-        color: Color(0xFFA1A1AA),
-        size: 20,
-      ),
+      iconTheme: const IconThemeData(color: Color(0xFFA1A1AA), size: 20),
 
       // 对话框主题
       dialogTheme: DialogThemeData(
         backgroundColor: surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -179,20 +208,64 @@ class AppTheme {
 
       // Text 主题
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
-        displayMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
-        displaySmall: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
-        headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
-        headlineSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        displayLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1F2937),
+        ),
+        displayMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1F2937),
+        ),
+        displaySmall: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1F2937),
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1F2937),
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1F2937),
+        ),
+        titleLarge: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1F2937),
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
+        titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
         bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
         bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
         bodySmall: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
-        labelSmall: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
+        labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
+        labelSmall: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
       ),
 
       // 输入框主题
@@ -222,13 +295,8 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -236,13 +304,8 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -263,17 +326,12 @@ class AppTheme {
       ),
 
       // 图标主题
-      iconTheme: const IconThemeData(
-        color: Color(0xFF6B7280),
-        size: 20,
-      ),
+      iconTheme: const IconThemeData(color: Color(0xFF6B7280), size: 20),
 
       // 对话框主题
       dialogTheme: DialogThemeData(
         backgroundColor: surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -330,9 +388,7 @@ class AppComponents {
       onPressed: loading ? null : onPressed,
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -345,11 +401,8 @@ class AppComponents {
             ),
             const SizedBox(width: 8),
           ],
-          if (icon != null) ...[
-            Icon(icon, size: 18),
-            const SizedBox(width: 8),
-          ],
-          Text(text),
+          if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+          Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -365,18 +418,13 @@ class AppComponents {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18),
-            const SizedBox(width: 8),
-          ],
-          Text(text),
+          if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+          Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -391,10 +439,7 @@ class AppComponents {
           const CircularProgressIndicator(strokeWidth: 3),
           if (message != null) ...[
             const SizedBox(height: 16),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 14),
-            ),
+            Text(message, style: const TextStyle(fontSize: 14)),
           ],
         ],
       ),
@@ -421,10 +466,7 @@ class AppComponents {
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
@@ -439,10 +481,7 @@ class AppComponents {
           ],
           if (onAction != null && actionText != null) ...[
             const SizedBox(height: 24),
-            primaryButton(
-              text: actionText,
-              onPressed: onAction,
-            ),
+            primaryButton(text: actionText, onPressed: onAction),
           ],
         ],
       ),

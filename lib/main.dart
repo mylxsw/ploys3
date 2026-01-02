@@ -182,7 +182,7 @@ class _AppShellState extends State<AppShell> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    'S3',
+                                                    context.loc('app_name_s3'),
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .titleMedium
@@ -195,7 +195,9 @@ class _AppShellState extends State<AppShell> {
                                                         ),
                                                   ),
                                                   Text(
-                                                    'MANAGER',
+                                                    context.loc(
+                                                      'app_name_manager',
+                                                    ),
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .labelSmall
@@ -235,7 +237,7 @@ class _AppShellState extends State<AppShell> {
                                                 _isSidebarExtended = false;
                                               });
                                             },
-                                            tooltip: 'Collapse',
+                                            tooltip: context.loc('collapse'),
                                           ),
                                         ),
                                       ],
@@ -247,7 +249,7 @@ class _AppShellState extends State<AppShell> {
                                     height: 60,
                                     alignment: Alignment.center,
                                     child: Tooltip(
-                                      message: 'Expand',
+                                      message: context.loc('expand'),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(

@@ -157,6 +157,27 @@ class LanguageManager extends ChangeNotifier {
       'confirm_delete_file': '确定要删除文件 "%s" 吗？',
       'cancel_btn': '取消',
       'confirm_btn': '确认',
+
+      // 新增翻译
+      'title_add_server': '添加服务器',
+      'title_edit_server': '编辑服务器',
+      'collapse': '收起',
+      'expand': '展开',
+      'app_name_s3': 'S3',
+      'app_name_manager': '管理器',
+      'upload_failed': '上传失败：%s',
+      'upload_success': '已上传 %s',
+      'rename_object_title': '重命名对象',
+      'delete_object_title': '删除对象',
+      'delete_object_confirm': '确定要删除 "%s" 吗？',
+      'delete_folder_title': '删除文件夹',
+      'delete_folder_warning': '警告：这将删除其中的所有文件和子文件夹！',
+      'delete_folder_success': '已删除文件夹 "%s" 和 %s 个对象',
+      'rename_success': '已将 %s 重命名为 %s',
+      'rename_error': '重命名 %s 时出错：%s',
+      'delete_error': '删除 %s 时出错：%s',
+      'uploading_file': '正在上传 %s...',
+      'deleting_file': '正在删除 %s...',
     },
     AppLanguage.english: {
       // Common
@@ -257,6 +278,28 @@ class LanguageManager extends ChangeNotifier {
       'confirm_delete_file': 'Are you sure you want to delete file "%s"?',
       'cancel_btn': 'Cancel',
       'confirm_btn': 'Confirm',
+
+      // New Translations
+      'title_add_server': 'Add Server',
+      'title_edit_server': 'Edit Server',
+      'collapse': 'Collapse',
+      'expand': 'Expand',
+      'app_name_s3': 'S3',
+      'app_name_manager': 'MANAGER',
+      'upload_failed': 'Upload failed: %s',
+      'upload_success': 'Uploaded %s',
+      'rename_object_title': 'Rename Object',
+      'delete_object_title': 'Delete Object',
+      'delete_object_confirm': 'Are you sure you want to delete "%s"?',
+      'delete_folder_title': 'Delete Folder',
+      'delete_folder_warning':
+          'Warning: This will delete all files and subfolders inside!',
+      'delete_folder_success': 'Deleted folder "%s" and %s object(s)',
+      'rename_success': 'Renamed %s to %s',
+      'rename_error': 'Error renaming %s: %s',
+      'delete_error': 'Error deleting %s: %s',
+      'uploading_file': 'Uploading %s...',
+      'deleting_file': 'Deleting %s...',
     },
   };
 }

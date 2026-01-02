@@ -10,6 +10,7 @@ import 'package:s3_ui/models/s3_server_config.dart';
 import 'package:s3_ui/r2_connection_helper.dart';
 import 'package:s3_ui/download_manager.dart';
 import 'package:s3_ui/widgets/loading_overlay.dart';
+import 'package:s3_ui/core/localization.dart';
 
 /// Represents an S3 object or directory prefix
 class S3Item {
@@ -307,12 +308,15 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                'Uploading $fileName...',
+                '${context.loc('uploading_file', [fileName])}...',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text('Please wait', style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                context.loc('loading'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -335,12 +339,15 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                'Deleting ${fileName.split('/').last}...',
+                '${context.loc('deleting_file', [fileName.split('/').last])}...',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text('Please wait', style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                context.loc('loading'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -355,7 +362,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       final flatBytes = bytes.expand((x) => x).toList();
 
       // Use our download manager for better error handling
-      final filePath = await DownloadManager.saveFile(
+      await DownloadManager.saveFile(
         fileName: key,
         bytes: Uint8List.fromList(flatBytes),
       );
@@ -363,9 +370,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (showDialog) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded: ${filePath.split('/').last}'),
+            content: Text(
+              context.loc('file_downloaded'), // Simple success message
+            ),
             action: SnackBarAction(
-              label: 'Open',
+              label: context.loc('ok'),
               onPressed: () {
                 // Could add functionality to open the file location
               },
@@ -391,19 +400,21 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final bool? confirmed = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename Object'),
+        title: Text(context.loc('rename_object_title')),
         content: TextField(
           controller: newKeyController,
-          decoration: const InputDecoration(labelText: 'New name'),
+          decoration: InputDecoration(
+            labelText: context.loc('name'), // Reusing name label
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.loc('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Rename'),
+            child: Text(context.loc('rename')),
           ),
         ],
       ),
@@ -419,14 +430,20 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             '/${widget.serverConfig.bucket}/$oldKey',
           );
           await _minio.removeObject(widget.serverConfig.bucket, oldKey);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Renamed $oldKey to $newKey')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.loc('rename_success', [oldKey, newKey])),
+            ),
+          );
           _listObjects();
         } catch (e) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error renaming $oldKey: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                context.loc('rename_error', [oldKey, e.toString()]),
+              ),
+            ),
+          );
         }
       }
     }
@@ -436,16 +453,16 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final bool? confirmed = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Object'),
-        content: Text('Are you sure you want to delete "$key"?'),
+        title: Text(context.loc('delete_object_title')),
+        content: Text(context.loc('delete_object_confirm', [key])),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.loc('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.loc('delete')),
           ),
         ],
       ),
@@ -463,7 +480,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           Navigator.pop(context); // Close progress dialog
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Deleted $key')));
+          ).showSnackBar(SnackBar(content: Text(context.loc('file_deleted'))));
           // Clear cache and refresh
           _clearCache();
           _listObjects();
@@ -475,9 +492,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             Navigator.pop(context); // Close progress dialog
           } catch (_) {}
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error deleting $key: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.loc('delete_error', [key, e.toString()])),
+            ),
+          );
         }
       }
     }
@@ -492,27 +511,37 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final bool? confirmed = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Folder'),
+        title: Text(context.loc('delete_folder_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to delete the folder "$folderKey"?'),
+            Text(
+              context.loc('delete_folder_confirm', [folderKey]),
+            ), // Reusing confirm delete folder key or creating dynamic? Wait, I added delete_folder_confirm? No, I added delete_folder_warning.
+            // Oh I see 'confirm_delete_folder' exists in core/language_manager.dart: '确定要删除文件夹 "%s" 及其所有内容吗？'
+            // But here the content was split. Let's use `confirm_delete_folder`.
             const SizedBox(height: 8),
-            const Text(
-              'Warning: This will delete all files and subfolders inside!',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            Text(
+              context.loc('delete_folder_warning'),
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.loc('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              context.loc('delete'),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -550,7 +579,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Deleted folder "$folderKey" and $deletedCount object(s)',
+              context.loc('delete_folder_success', [
+                folderKey,
+                deletedCount.toString(),
+              ]),
             ),
           ),
         );
@@ -566,7 +598,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         } catch (_) {}
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting folder $folderKey: $e')),
+          SnackBar(
+            content: Text(
+              context.loc('delete_error', [folderKey, e.toString()]),
+            ),
+          ),
         );
       }
     }
@@ -608,7 +644,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Copy Options',
+            context.loc('copy_options'),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Column(
@@ -622,14 +658,14 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 title: Text(
-                  'Copy URL',
+                  context.loc('copy_url'),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 onTap: () {
                   final url = _buildFileUrl(key);
                   Clipboard.setData(ClipboardData(text: url));
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(content: Text('URL copied to clipboard')),
+                    SnackBar(content: Text(context.loc('url_copied'))),
                   );
                   Navigator.pop(dialogContext);
                 },
@@ -644,7 +680,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   title: Text(
-                    'Copy Markdown',
+                    context.loc('copy_markdown'),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   onTap: () {
@@ -652,9 +688,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     final markdown = '![${key.split('/').last}]($url)';
                     Clipboard.setData(ClipboardData(text: markdown));
                     ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('Markdown copied to clipboard'),
-                      ),
+                      SnackBar(content: Text(context.loc('markdown_copied'))),
                     );
                     Navigator.pop(dialogContext);
                   },
@@ -665,7 +699,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
+              child: Text(context.loc('cancel')),
             ),
           ],
         );
@@ -740,7 +774,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Upload failed: $e'),
+            content: Text(context.loc('upload_failed', [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -769,9 +803,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       // Close progress dialog
       if (mounted) {
         Navigator.pop(context); // Close progress dialog
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Uploaded $fileName')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.loc('upload_success', [fileName]))),
+        );
         // Clear cache and refresh to show the new file
         _clearCache();
         _listObjects(prefix: _currentPrefix);

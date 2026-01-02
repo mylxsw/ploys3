@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:s3_ui/models/s3_server_config.dart';
+import 'package:s3_ui/core/localization.dart';
 
 import 'package:s3_ui/widgets/window_title_bar.dart';
 
@@ -131,8 +132,8 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                 appBar: AppBar(
                   title: Text(
                     widget.existingConfig != null
-                        ? 'Edit Server'
-                        : 'Add Server',
+                        ? context.loc('title_edit_server')
+                        : context.loc('title_add_server'),
                   ),
                   elevation: 0,
                   scrolledUnderElevation: 0,
@@ -152,40 +153,40 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                               child: ListView(
                                 children: <Widget>[
                                   _buildTextFormField(
-                                    'Name',
+                                    context.loc('name'),
                                     _nameController,
-                                    'e.g., My Personal S3',
+                                    context.loc('name_hint'),
                                   ),
                                   _buildTextFormField(
-                                    'Address',
+                                    context.loc('address'),
                                     _addressController,
-                                    'https://s3.example.com',
+                                    context.loc('address_hint'),
                                   ),
                                   _buildTextFormField(
-                                    'Bucket',
+                                    context.loc('bucket'),
                                     _bucketController,
-                                    'my-bucket',
+                                    context.loc('bucket_hint'),
                                   ),
                                   _buildTextFormField(
-                                    'Access Key ID',
+                                    context.loc('access_key_id'),
                                     _accessKeyIdController,
-                                    'your-access-key-id',
+                                    context.loc('access_key_hint'),
                                   ),
                                   _buildTextFormField(
-                                    'Secret Access Key',
+                                    context.loc('secret_access_key'),
                                     _secretAccessKeyController,
-                                    'your-secret-access-key',
+                                    context.loc('secret_key_hint'),
                                     obscureText: true,
                                   ),
                                   _buildTextFormField(
-                                    'Region (optional)',
+                                    context.loc('region'),
                                     _regionController,
-                                    'auto (for R2) or us-east-1',
+                                    context.loc('region_hint'),
                                   ),
                                   _buildTextFormField(
-                                    'CDN URL (optional)',
+                                    context.loc('cdn_url'),
                                     _cdnUrlController,
-                                    'https://cdn.example.com',
+                                    context.loc('cdn_hint'),
                                   ),
                                 ],
                               ),
@@ -197,7 +198,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                                   onPressed: () {
                                     Navigator.pop(context);
                                   },
-                                  child: const Text('Cancel'),
+                                  child: Text(context.loc('cancel')),
                                 ),
                                 const SizedBox(width: 12),
                                 ElevatedButton(
@@ -208,7 +209,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                                       vertical: 12,
                                     ),
                                   ),
-                                  child: const Text('Save'),
+                                  child: Text(context.loc('save')),
                                 ),
                               ],
                             ),
@@ -253,7 +254,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Please enter $label';
+            return context.loc('validation_required', [label]);
           }
           return null;
         },

@@ -30,6 +30,29 @@ class WindowTitleBar extends StatelessWidget {
             // if we are fully replacing the frame.
 
             // For macOS specifically, often we want the buttons on the left.
+            const SizedBox(width: 8),
+            // Traffic light buttons
+            Row(
+              children: [
+                _WindowButton(
+                  icon: Icons.close,
+                  onPressed: appWindow.close,
+                  color: const Color(0xFFFF5F57),
+                ),
+                const SizedBox(width: 8),
+                _WindowButton(
+                  icon: Icons.minimize,
+                  onPressed: appWindow.minimize,
+                  color: const Color(0xFFFFBD2E),
+                ),
+                const SizedBox(width: 8),
+                _WindowButton(
+                  icon: Icons.crop_square,
+                  onPressed: appWindow.maximizeOrRestore,
+                  color: const Color(0xFF28C940),
+                ),
+              ],
+            ),
             const SizedBox(width: 10),
             // Custom window buttons or just spacing?
             // Let's add a move window handler for the whole area.
@@ -52,6 +75,30 @@ class WindowTitleBar extends StatelessWidget {
             // Strategy: Just provide the drag area.
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WindowButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color color;
+
+  const _WindowButton({
+    required this.icon,
+    required this.onPressed,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
     );
   }

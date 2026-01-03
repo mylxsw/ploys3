@@ -32,83 +32,26 @@ class AppTheme {
         backgroundColor: surfaceColor,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: Color(0xFFE4E4E7),
-          fontSize: AppFontSizes.xxl,
-          fontWeight: FontWeight.w600,
-        ),
+        titleTextStyle: TextStyle(color: Color(0xFFE4E4E7), fontSize: AppFontSizes.xxl, fontWeight: FontWeight.w600),
         iconTheme: IconThemeData(color: Color(0xFFA1A1AA)),
       ),
 
       // Text 主题
       textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: AppFontSizes.display,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFE4E4E7),
-        ),
-        displayMedium: TextStyle(
-          fontSize: AppFontSizes.xxxl,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFE4E4E7),
-        ),
-        displaySmall: TextStyle(
-          fontSize: AppFontSizes.xxl,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFE4E4E7),
-        ),
-        headlineMedium: TextStyle(
-          fontSize: AppFontSizes.xl,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFFE4E4E7),
-        ),
-        headlineSmall: TextStyle(
-          fontSize: AppFontSizes.lg,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFFE4E4E7),
-        ),
-        titleLarge: TextStyle(
-          fontSize: AppFontSizes.xl,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFFE4E4E7),
-        ),
-        titleMedium: TextStyle(
-          fontSize: AppFontSizes.lg,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFE4E4E7),
-        ),
-        titleSmall: TextStyle(
-          fontSize: AppFontSizes.md,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFE4E4E7),
-        ),
-        bodyLarge: TextStyle(
-          fontSize: AppFontSizes.lg,
-          color: Color(0xFFE4E4E7),
-        ),
-        bodyMedium: TextStyle(
-          fontSize: AppFontSizes.md,
-          color: Color(0xFFA1A1AA),
-        ),
-        bodySmall: TextStyle(
-          fontSize: AppFontSizes.sm,
-          color: Color(0xFF71717A),
-        ),
-        labelLarge: TextStyle(
-          fontSize: AppFontSizes.md,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFE4E4E7),
-        ),
-        labelMedium: TextStyle(
-          fontSize: AppFontSizes.sm,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFE4E4E7),
-        ),
-        labelSmall: TextStyle(
-          fontSize: AppFontSizes.xs,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFE4E4E7),
-        ),
+        displayLarge: TextStyle(fontSize: AppFontSizes.display, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
+        displayMedium: TextStyle(fontSize: AppFontSizes.xxxl, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
+        displaySmall: TextStyle(fontSize: AppFontSizes.xxl, fontWeight: FontWeight.bold, color: Color(0xFFE4E4E7)),
+        headlineMedium: TextStyle(fontSize: AppFontSizes.xl, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
+        headlineSmall: TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
+        titleLarge: TextStyle(fontSize: AppFontSizes.xl, fontWeight: FontWeight.w600, color: Color(0xFFE4E4E7)),
+        titleMedium: TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        titleSmall: TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        bodyLarge: TextStyle(fontSize: AppFontSizes.lg, color: Color(0xFFE4E4E7)),
+        bodyMedium: TextStyle(fontSize: AppFontSizes.md, color: Color(0xFFA1A1AA)),
+        bodySmall: TextStyle(fontSize: AppFontSizes.sm, color: Color(0xFF71717A)),
+        labelLarge: TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        labelMedium: TextStyle(fontSize: AppFontSizes.sm, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
+        labelSmall: TextStyle(fontSize: AppFontSizes.xs, fontWeight: FontWeight.w500, color: Color(0xFFE4E4E7)),
       ),
 
       // 输入框主题
@@ -139,10 +82,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(
-            fontSize: AppFontSizes.md,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -151,10 +91,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(
-            fontSize: AppFontSizes.md,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -169,10 +106,7 @@ class AppTheme {
       ),
 
       // 分割线主题
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFF3F3F46),
-        thickness: 1,
-      ),
+      dividerTheme: const DividerThemeData(color: Color(0xFF3F3F46), thickness: 1),
 
       // 图标主题
       iconTheme: const IconThemeData(color: Color(0xFFA1A1AA), size: 20),
@@ -222,83 +156,26 @@ class AppTheme {
         backgroundColor: surfaceColor,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: Color(0xFF1F2937),
-          fontSize: AppFontSizes.xxl,
-          fontWeight: FontWeight.w600,
-        ),
+        titleTextStyle: TextStyle(color: Color(0xFF1F2937), fontSize: AppFontSizes.xxl, fontWeight: FontWeight.w600),
         iconTheme: IconThemeData(color: Color(0xFF6B7280)),
       ),
 
       // Text 主题
       textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: AppFontSizes.display,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1F2937),
-        ),
-        displayMedium: TextStyle(
-          fontSize: AppFontSizes.xxxl,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1F2937),
-        ),
-        displaySmall: TextStyle(
-          fontSize: AppFontSizes.xxl,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1F2937),
-        ),
-        headlineMedium: TextStyle(
-          fontSize: AppFontSizes.xl,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF1F2937),
-        ),
-        headlineSmall: TextStyle(
-          fontSize: AppFontSizes.lg,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF1F2937),
-        ),
-        titleLarge: TextStyle(
-          fontSize: AppFontSizes.xl,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF1F2937),
-        ),
-        titleMedium: TextStyle(
-          fontSize: AppFontSizes.lg,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1F2937),
-        ),
-        titleSmall: TextStyle(
-          fontSize: AppFontSizes.md,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1F2937),
-        ),
-        bodyLarge: TextStyle(
-          fontSize: AppFontSizes.lg,
-          color: Color(0xFF1F2937),
-        ),
-        bodyMedium: TextStyle(
-          fontSize: AppFontSizes.md,
-          color: Color(0xFF6B7280),
-        ),
-        bodySmall: TextStyle(
-          fontSize: AppFontSizes.sm,
-          color: Color(0xFF9CA3AF),
-        ),
-        labelLarge: TextStyle(
-          fontSize: AppFontSizes.md,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1F2937),
-        ),
-        labelMedium: TextStyle(
-          fontSize: AppFontSizes.sm,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1F2937),
-        ),
-        labelSmall: TextStyle(
-          fontSize: AppFontSizes.xs,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1F2937),
-        ),
+        displayLarge: TextStyle(fontSize: AppFontSizes.display, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+        displayMedium: TextStyle(fontSize: AppFontSizes.xxxl, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+        displaySmall: TextStyle(fontSize: AppFontSizes.xxl, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+        headlineMedium: TextStyle(fontSize: AppFontSizes.xl, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+        headlineSmall: TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+        titleLarge: TextStyle(fontSize: AppFontSizes.xl, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+        titleMedium: TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        titleSmall: TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        bodyLarge: TextStyle(fontSize: AppFontSizes.lg, color: Color(0xFF1F2937)),
+        bodyMedium: TextStyle(fontSize: AppFontSizes.md, color: Color(0xFF6B7280)),
+        bodySmall: TextStyle(fontSize: AppFontSizes.sm, color: Color(0xFF9CA3AF)),
+        labelLarge: TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        labelMedium: TextStyle(fontSize: AppFontSizes.sm, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
+        labelSmall: TextStyle(fontSize: AppFontSizes.xs, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
       ),
 
       // 输入框主题
@@ -329,10 +206,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(
-            fontSize: AppFontSizes.md,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -341,10 +215,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(
-            fontSize: AppFontSizes.md,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: AppFontSizes.md, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -359,10 +230,7 @@ class AppTheme {
       ),
 
       // 分割线主题
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFFE5E7EB),
-        thickness: 1,
-      ),
+      dividerTheme: const DividerThemeData(color: Color(0xFFE5E7EB), thickness: 1),
 
       // 图标主题
       iconTheme: const IconThemeData(color: Color(0xFF6B7280), size: 20),
@@ -395,21 +263,14 @@ class AppComponents {
   }) {
     final card = Container(
       padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: borderRadius ?? BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: borderRadius ?? BorderRadius.circular(12)),
       child: child,
     );
 
     if (onTap != null) {
       return Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: borderRadius ?? BorderRadius.circular(12),
-          child: card,
-        ),
+        child: InkWell(onTap: onTap, borderRadius: borderRadius ?? BorderRadius.circular(12), child: card),
       );
     }
 
@@ -433,26 +294,24 @@ class AppComponents {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (loading) ...[
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
             const SizedBox(width: 8),
           ],
           if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-          Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
+          Flexible(
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: AppFontSizes.sm),
+            ),
+          ),
         ],
       ),
     );
   }
 
   /// 次要按钮组件
-  static Widget secondaryButton({
-    required String text,
-    required VoidCallback onPressed,
-    IconData? icon,
-  }) {
+  static Widget secondaryButton({required String text, required VoidCallback onPressed, IconData? icon}) {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -497,27 +356,17 @@ class AppComponents {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon ?? Icons.inbox_outlined,
-            size: 64,
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
+          Icon(icon ?? Icons.inbox_outlined, size: 64, color: Colors.grey.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: AppFontSizes.xxl,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: AppFontSizes.xxl, fontWeight: FontWeight.w500),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: AppFontSizes.md,
-                color: Colors.grey.withValues(alpha: 0.7),
-              ),
+              style: TextStyle(fontSize: AppFontSizes.md, color: Colors.grey.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
           ],

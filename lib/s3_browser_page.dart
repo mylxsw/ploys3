@@ -1294,7 +1294,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                       : null,
                 )
               : Icon(
-                  object.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                  _getFileIcon(object.key, isDirectory: object.isDirectory),
                   color: object.isDirectory
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1421,7 +1421,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        object.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                        _getFileIcon(object.key, isDirectory: object.isDirectory),
                         size: 48,
                         color: object.isDirectory
                             ? Theme.of(context).colorScheme.primary
@@ -1471,6 +1471,82 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         );
       },
     );
+  }
+
+  IconData _getFileIcon(String key, {required bool isDirectory}) {
+    if (isDirectory) {
+      return Icons.folder;
+    }
+
+    final lowerKey = key.toLowerCase();
+    final lastDot = lowerKey.lastIndexOf('.');
+    final ext = lastDot == -1 ? '' : lowerKey.substring(lastDot + 1);
+
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'bmp':
+      case 'webp':
+      case 'svg':
+        return Icons.image_outlined;
+      case 'mp4':
+      case 'mov':
+      case 'avi':
+      case 'mkv':
+      case 'webm':
+        return Icons.movie_outlined;
+      case 'mp3':
+      case 'wav':
+      case 'flac':
+      case 'aac':
+      case 'm4a':
+      case 'ogg':
+        return Icons.audio_file_outlined;
+      case 'pdf':
+        return Icons.picture_as_pdf_outlined;
+      case 'doc':
+      case 'docx':
+        return Icons.wysiwyg_outlined;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return Icons.table_chart_outlined;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow_outlined;
+      case 'zip':
+      case 'rar':
+      case '7z':
+      case 'tar':
+      case 'gz':
+        return Icons.archive_outlined;
+      case 'txt':
+      case 'md':
+        return Icons.article_outlined;
+      case 'log':
+        return Icons.receipt_long_outlined;
+      case 'json':
+      case 'yaml':
+      case 'yml':
+      case 'xml':
+      case 'ini':
+      case 'conf':
+      case 'cfg':
+        return Icons.data_object_outlined;
+      case 'apk':
+      case 'ipa':
+      case 'exe':
+      case 'dmg':
+      case 'pkg':
+      case 'app':
+        return Icons.apps_outlined;
+      case 'html':
+        return Icons.html_outlined;
+      default:
+        return Icons.insert_drive_file_outlined;
+    }
   }
 }
 
@@ -1748,7 +1824,20 @@ class _PreviewContentState extends State<_PreviewContent> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 30),
+                IconButton(
+                  icon: Icon(
+                    const [
+                          TargetPlatform.windows,
+                          TargetPlatform.macOS,
+                          TargetPlatform.linux,
+                        ].contains(defaultTargetPlatform)
+                        ? Icons.close
+                        : Icons.arrow_back_ios,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  onPressed: widget.onClose,
+                ),
+
                 Expanded(
                   child: Text(
                     context.loc('preview'),
@@ -1757,10 +1846,7 @@ class _PreviewContentState extends State<_PreviewContent> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
-                  onPressed: widget.onClose,
-                ),
+                const SizedBox(width: 30),
               ],
             ),
             const SizedBox(height: 16),

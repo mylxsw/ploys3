@@ -296,7 +296,9 @@ class _AppShellState extends State<AppShell> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: isDrawer
+            ? null
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -375,6 +377,42 @@ class _AppShellState extends State<AppShell> {
                             tooltip: context.loc('collapse'),
                           ),
                         ),
+                      if (isDrawer)
+                        Positioned(
+                          top: 15,
+                          right: 30,
+                          child: Center(
+                            child: Tooltip(
+                              message: context.loc('add_new_server'),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () {
+                                      onDrawerClose?.call();
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          pageBuilder: (context, animation, secondaryAnimation) =>
+                                              S3ConfigPage(onSave: _loadConfigs),
+                                        ),
+                                      );
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(8),
+                                      child: Icon(Icons.add, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 )
@@ -412,7 +450,7 @@ class _AppShellState extends State<AppShell> {
                 ),
               const SizedBox(height: 12),
               // Add Server Button
-              if (isSidebarExtended)
+              if (!isDrawer && isSidebarExtended)
                 SizedBox(
                   width: sidebarWidth - 32,
                   child: AppComponents.primaryButton(
@@ -428,33 +466,37 @@ class _AppShellState extends State<AppShell> {
                       );
                     },
                   ),
-                )
-              else
-                Center(
-                  child: Tooltip(
-                    message: context.loc('add_new_server'),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+                ),
+              if (!isSidebarExtended)
+                Positioned(
+                  top: 15,
+                  right: 30,
+                  child: Center(
+                    child: Tooltip(
+                      message: context.loc('add_new_server'),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(8),
-                          onTap: () {
-                            onDrawerClose?.call();
-                            Navigator.push(
-                              context,
-                              PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) =>
-                                    S3ConfigPage(onSave: _loadConfigs),
-                              ),
-                            );
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(Icons.add, color: Colors.white, size: 20),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              onDrawerClose?.call();
+                              Navigator.push(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (context, animation, secondaryAnimation) =>
+                                      S3ConfigPage(onSave: _loadConfigs),
+                                ),
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(Icons.add, color: Colors.white, size: 20),
+                            ),
                           ),
                         ),
                       ),
@@ -471,10 +513,10 @@ class _AppShellState extends State<AppShell> {
               return NavigationRailDestination(
                 icon: Icon(
                   Icons.cloud_outlined,
-                  size: 20,
+                  size: 25,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-                selectedIcon: Icon(Icons.cloud_done, size: 20, color: Theme.of(context).colorScheme.primary),
+                selectedIcon: Icon(Icons.cloud_done, size: 25, color: Theme.of(context).colorScheme.primary),
                 label: GestureDetector(
                   onSecondaryTapDown: (details) {
                     _showServerContextMenu(context, details.globalPosition, server);
@@ -491,7 +533,7 @@ class _AppShellState extends State<AppShell> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: AppFontSizes.md - 1,
+                        fontSize: AppFontSizes.md,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
@@ -500,7 +542,7 @@ class _AppShellState extends State<AppShell> {
                     ),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 10),
               );
             }),
           ],
@@ -528,6 +570,7 @@ class _AppShellState extends State<AppShell> {
                         padding: const EdgeInsets.all(12),
                         child: isSidebarExtended
                             ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
                                   const SizedBox(width: 12),

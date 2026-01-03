@@ -70,11 +70,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 body: isMobilePlatform
                     ? SingleChildScrollView(
                         padding: const EdgeInsets.all(16),
-                        child: _buildSettingsContent(context, isMobile: true),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: _buildSettingsContent(context, isMobile: true),
+                          ),
+                        ),
                       )
                     : Padding(
                         padding: const EdgeInsets.all(16),
-                        child: _buildSettingsContent(context, isMobile: false),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: _buildSettingsContent(context, isMobile: false),
+                          ),
+                        ),
                       ),
               ),
             ),

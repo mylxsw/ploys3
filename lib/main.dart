@@ -29,11 +29,7 @@ void main() {
 
   runApp(const App());
 
-  if (const [
-    TargetPlatform.windows,
-    TargetPlatform.macOS,
-    TargetPlatform.linux,
-  ].contains(defaultTargetPlatform)) {
+  if (const [TargetPlatform.windows, TargetPlatform.macOS, TargetPlatform.linux].contains(defaultTargetPlatform)) {
     doWhenWindowReady(() {
       const initialSize = Size(1280, 800);
       appWindow.minSize = const Size(800, 600);
@@ -55,7 +51,7 @@ class App extends StatelessWidget {
       animation: ThemeManager.instance,
       builder: (context, child) {
         return MaterialApp(
-          title: 'S3 Manager',
+          title: 'Ploy S3',
           theme: ThemeManager.instance.currentTheme,
           debugShowCheckedModeBanner: false,
           home: const LanguageProvider(child: ThemeProvider(child: AppShell())),
@@ -88,19 +84,15 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings =
-        prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
     setState(() {
-      _serverConfigs = serverConfigsStrings
-          .map((config) => S3ServerConfig.fromJson(json.decode(config)))
-          .toList();
+      _serverConfigs = serverConfigsStrings.map((config) => S3ServerConfig.fromJson(json.decode(config))).toList();
     });
   }
 
   Future<void> _deleteServer(S3ServerConfig server) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings =
-        prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
     serverConfigsStrings.removeWhere((configStr) {
       final config = S3ServerConfig.fromJson(json.decode(configStr));
       return config.id == server.id;
@@ -115,44 +107,24 @@ class _AppShellState extends State<AppShell> {
     await _loadConfigs();
   }
 
-  void _showServerContextMenu(
-    BuildContext context,
-    Offset position,
-    S3ServerConfig server,
-  ) {
+  void _showServerContextMenu(BuildContext context, Offset position, S3ServerConfig server) {
     showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy,
-        position.dx + 1,
-        position.dy + 1,
-      ),
+      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx + 1, position.dy + 1),
       items: [
         PopupMenuItem<String>(
           value: 'edit',
           child: Row(
-            children: [
-              const Icon(Icons.edit, size: 18),
-              const SizedBox(width: 8),
-              Text(context.loc('edit_server')),
-            ],
+            children: [const Icon(Icons.edit, size: 18), const SizedBox(width: 8), Text(context.loc('edit_server'))],
           ),
         ),
         PopupMenuItem<String>(
           value: 'delete',
           child: Row(
             children: [
-              Icon(
-                Icons.delete,
-                size: 18,
-                color: Theme.of(context).colorScheme.error,
-              ),
+              Icon(Icons.delete, size: 18, color: Theme.of(context).colorScheme.error),
               const SizedBox(width: 8),
-              Text(
-                context.loc('delete'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+              Text(context.loc('delete'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
           ),
         ),
@@ -164,23 +136,19 @@ class _AppShellState extends State<AppShell> {
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
                 S3ConfigPage(existingConfig: server, onSave: _loadConfigs),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  const curve = Curves.easeOutQuart;
-                  var scaleAnimation = Tween(
-                    begin: 0.0,
-                    end: 1.0,
-                  ).animate(CurvedAnimation(parent: animation, curve: curve));
-                  var fadeAnimation = Tween(
-                    begin: 0.0,
-                    end: 1.0,
-                  ).animate(CurvedAnimation(parent: animation, curve: curve));
-                  return ScaleTransition(
-                    scale: scaleAnimation,
-                    alignment: Alignment.topLeft,
-                    child: FadeTransition(opacity: fadeAnimation, child: child),
-                  );
-                },
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              const curve = Curves.easeOutQuart;
+              var scaleAnimation = Tween(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: animation, curve: curve));
+              var fadeAnimation = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: animation, curve: curve));
+              return ScaleTransition(
+                scale: scaleAnimation,
+                alignment: Alignment.topLeft,
+                child: FadeTransition(opacity: fadeAnimation, child: child),
+              );
+            },
             transitionDuration: const Duration(milliseconds: 400),
             reverseTransitionDuration: const Duration(milliseconds: 300),
           ),
@@ -196,21 +164,12 @@ class _AppShellState extends State<AppShell> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.loc('delete_server_title')),
-        content: Text(
-          context
-              .loc('delete_server_message')
-              .replaceAll('{name}', server.name),
-        ),
+        content: Text(context.loc('delete_server_message').replaceAll('{name}', server.name)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(context.loc('cancel')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(context.loc('delete')),
           ),
         ],
@@ -287,59 +246,32 @@ class _AppShellState extends State<AppShell> {
                                               decoration: BoxDecoration(
                                                 gradient: LinearGradient(
                                                   colors: [
-                                                    Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                                    Theme.of(
-                                                      context,
-                                                    ).colorScheme.secondary,
+                                                    Theme.of(context).colorScheme.primary,
+                                                    Theme.of(context).colorScheme.secondary,
                                                   ],
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(8),
                                               ),
-                                              child: const Icon(
-                                                Icons.cloud_outlined,
-                                                size: 20,
-                                                color: Colors.white,
-                                              ),
+                                              child: const Icon(Icons.cloud_outlined, size: 20, color: Colors.white),
                                             ),
                                             const SizedBox(width: 8),
                                             Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   context.loc('app_name_s3'),
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleSmall
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Theme.of(
-                                                          context,
-                                                        ).colorScheme.primary,
-                                                      ),
+                                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                  ),
                                                 ),
                                                 Text(
-                                                  context.loc(
-                                                    'app_name_manager',
+                                                  context.loc('app_name_manager'),
+                                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                    fontSize: AppFontSizes.xs,
+                                                    letterSpacing: 2,
+                                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                                                   ),
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        fontSize:
-                                                            AppFontSizes.xs,
-                                                        letterSpacing: 2,
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .primary
-                                                            .withValues(
-                                                              alpha: 0.7,
-                                                            ),
-                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -354,9 +286,7 @@ class _AppShellState extends State<AppShell> {
                                           visualDensity: VisualDensity.compact,
                                           icon: Icon(
                                             Icons.menu_open_rounded,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface,
+                                            color: Theme.of(context).colorScheme.onSurface,
                                             size: 20,
                                           ),
                                           onPressed: () {
@@ -381,12 +311,8 @@ class _AppShellState extends State<AppShell> {
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.secondary,
+                                            Theme.of(context).colorScheme.primary,
+                                            Theme.of(context).colorScheme.secondary,
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(8),
@@ -394,9 +320,7 @@ class _AppShellState extends State<AppShell> {
                                       child: Material(
                                         color: Colors.transparent,
                                         child: InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                           onTap: () {
                                             setState(() {
                                               _isSidebarExtended = true;
@@ -404,11 +328,7 @@ class _AppShellState extends State<AppShell> {
                                           },
                                           child: const Padding(
                                             padding: EdgeInsets.all(8),
-                                            child: Icon(
-                                              Icons.cloud_outlined,
-                                              size: 24,
-                                              color: Colors.white,
-                                            ),
+                                            child: Icon(Icons.cloud_outlined, size: 24, color: Colors.white),
                                           ),
                                         ),
                                       ),
@@ -427,60 +347,29 @@ class _AppShellState extends State<AppShell> {
                                       Navigator.push(
                                         context,
                                         PageRouteBuilder(
-                                          pageBuilder:
-                                              (
-                                                context,
-                                                animation,
-                                                secondaryAnimation,
-                                              ) => S3ConfigPage(
-                                                onSave: _loadConfigs,
-                                              ),
-                                          transitionsBuilder:
-                                              (
-                                                context,
-                                                animation,
-                                                secondaryAnimation,
-                                                child,
-                                              ) {
-                                                const curve =
-                                                    Curves.easeOutQuart;
+                                          pageBuilder: (context, animation, secondaryAnimation) =>
+                                              S3ConfigPage(onSave: _loadConfigs),
+                                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                            const curve = Curves.easeOutQuart;
 
-                                                var scaleAnimation =
-                                                    Tween(
-                                                      begin: 0.0,
-                                                      end: 1.0,
-                                                    ).animate(
-                                                      CurvedAnimation(
-                                                        parent: animation,
-                                                        curve: curve,
-                                                      ),
-                                                    );
+                                            var scaleAnimation = Tween(
+                                              begin: 0.0,
+                                              end: 1.0,
+                                            ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                var fadeAnimation =
-                                                    Tween(
-                                                      begin: 0.0,
-                                                      end: 1.0,
-                                                    ).animate(
-                                                      CurvedAnimation(
-                                                        parent: animation,
-                                                        curve: curve,
-                                                      ),
-                                                    );
+                                            var fadeAnimation = Tween(
+                                              begin: 0.0,
+                                              end: 1.0,
+                                            ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                return ScaleTransition(
-                                                  scale: scaleAnimation,
-                                                  alignment: Alignment.topLeft,
-                                                  child: FadeTransition(
-                                                    opacity: fadeAnimation,
-                                                    child: child,
-                                                  ),
-                                                );
-                                              },
-                                          transitionDuration: const Duration(
-                                            milliseconds: 400,
-                                          ),
-                                          reverseTransitionDuration:
-                                              const Duration(milliseconds: 300),
+                                            return ScaleTransition(
+                                              scale: scaleAnimation,
+                                              alignment: Alignment.topLeft,
+                                              child: FadeTransition(opacity: fadeAnimation, child: child),
+                                            );
+                                          },
+                                          transitionDuration: const Duration(milliseconds: 400),
+                                          reverseTransitionDuration: const Duration(milliseconds: 300),
                                         ),
                                       );
                                     },
@@ -492,90 +381,46 @@ class _AppShellState extends State<AppShell> {
                                     message: context.loc('add_new_server'),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
+                                        color: Theme.of(context).colorScheme.primary,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Material(
                                         color: Colors.transparent,
                                         child: InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                           onTap: () {
                                             Navigator.push(
                                               context,
                                               PageRouteBuilder(
-                                                pageBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                    ) => S3ConfigPage(
-                                                      onSave: _loadConfigs,
-                                                    ),
-                                                transitionsBuilder:
-                                                    (
-                                                      context,
-                                                      animation,
-                                                      secondaryAnimation,
-                                                      child,
-                                                    ) {
-                                                      const curve =
-                                                          Curves.easeOutQuart;
+                                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                                    S3ConfigPage(onSave: _loadConfigs),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                  const curve = Curves.easeOutQuart;
 
-                                                      var scaleAnimation =
-                                                          Tween(
-                                                            begin: 0.0,
-                                                            end: 1.0,
-                                                          ).animate(
-                                                            CurvedAnimation(
-                                                              parent: animation,
-                                                              curve: curve,
-                                                            ),
-                                                          );
+                                                  var scaleAnimation = Tween(
+                                                    begin: 0.0,
+                                                    end: 1.0,
+                                                  ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                      var fadeAnimation =
-                                                          Tween(
-                                                            begin: 0.0,
-                                                            end: 1.0,
-                                                          ).animate(
-                                                            CurvedAnimation(
-                                                              parent: animation,
-                                                              curve: curve,
-                                                            ),
-                                                          );
+                                                  var fadeAnimation = Tween(
+                                                    begin: 0.0,
+                                                    end: 1.0,
+                                                  ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                      return ScaleTransition(
-                                                        scale: scaleAnimation,
-                                                        alignment:
-                                                            Alignment.topLeft,
-                                                        child: FadeTransition(
-                                                          opacity:
-                                                              fadeAnimation,
-                                                          child: child,
-                                                        ),
-                                                      );
-                                                    },
-                                                transitionDuration:
-                                                    const Duration(
-                                                      milliseconds: 400,
-                                                    ),
-                                                reverseTransitionDuration:
-                                                    const Duration(
-                                                      milliseconds: 300,
-                                                    ),
+                                                  return ScaleTransition(
+                                                    scale: scaleAnimation,
+                                                    alignment: Alignment.topLeft,
+                                                    child: FadeTransition(opacity: fadeAnimation, child: child),
+                                                  );
+                                                },
+                                                transitionDuration: const Duration(milliseconds: 400),
+                                                reverseTransitionDuration: const Duration(milliseconds: 300),
                                               ),
                                             );
                                           },
                                           child: const Padding(
                                             padding: EdgeInsets.all(8),
-                                            child: Icon(
-                                              Icons.add,
-                                              color: Colors.white,
-                                              size: 20,
-                                            ),
+                                            child: Icon(Icons.add, color: Colors.white, size: 20),
                                           ),
                                         ),
                                       ),
@@ -584,22 +429,16 @@ class _AppShellState extends State<AppShell> {
                                 ),
                             ],
                           ),
-                          indicatorColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                          indicatorShape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          indicatorColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           destinations: [
                             ..._serverConfigs.map((server) {
-                              final isSelected =
-                                  _selectedServerConfig?.id == server.id;
+                              final isSelected = _selectedServerConfig?.id == server.id;
                               return NavigationRailDestination(
                                 icon: Icon(
                                   Icons.cloud_outlined,
                                   size: 20,
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                                 selectedIcon: Icon(
                                   Icons.cloud_done,
@@ -608,24 +447,14 @@ class _AppShellState extends State<AppShell> {
                                 ),
                                 label: GestureDetector(
                                   onSecondaryTapDown: (details) {
-                                    _showServerContextMenu(
-                                      context,
-                                      details.globalPosition,
-                                      server,
-                                    );
+                                    _showServerContextMenu(context, details.globalPosition, server);
                                   },
                                   onLongPressStart: (details) {
-                                    _showServerContextMenu(
-                                      context,
-                                      details.globalPosition,
-                                      server,
-                                    );
+                                    _showServerContextMenu(context, details.globalPosition, server);
                                   },
                                   child: ConstrainedBox(
                                     constraints: BoxConstraints(
-                                      maxWidth:
-                                          _sidebarWidth -
-                                          80, // Prevent overflow
+                                      maxWidth: _sidebarWidth - 80, // Prevent overflow
                                     ),
                                     child: Text(
                                       server.name,
@@ -633,23 +462,15 @@ class _AppShellState extends State<AppShell> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: AppFontSizes.md - 1,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                                         color: isSelected
-                                            ? Theme.of(
-                                                context,
-                                              ).colorScheme.primary
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
+                                            ? Theme.of(context).colorScheme.primary
+                                            : Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 6),
                               );
                             }),
                           ],
@@ -659,10 +480,7 @@ class _AppShellState extends State<AppShell> {
                               children: [
                                 // Settings Button
                                 Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 16,
-                                  ),
+                                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -670,63 +488,31 @@ class _AppShellState extends State<AppShell> {
                                         Navigator.push(
                                           context,
                                           PageRouteBuilder(
-                                            pageBuilder:
-                                                (
-                                                  context,
-                                                  animation,
-                                                  secondaryAnimation,
-                                                ) => const SettingsPage(),
-                                            transitionsBuilder:
-                                                (
-                                                  context,
-                                                  animation,
-                                                  secondaryAnimation,
-                                                  child,
-                                                ) {
-                                                  const begin = 0.0;
-                                                  const end = 1.0;
-                                                  const curve =
-                                                      Curves.easeOutQuart;
+                                            pageBuilder: (context, animation, secondaryAnimation) =>
+                                                const SettingsPage(),
+                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                              const begin = 0.0;
+                                              const end = 1.0;
+                                              const curve = Curves.easeOutQuart;
 
-                                                  var scaleAnimation =
-                                                      Tween(
-                                                        begin: begin,
-                                                        end: end,
-                                                      ).animate(
-                                                        CurvedAnimation(
-                                                          parent: animation,
-                                                          curve: curve,
-                                                        ),
-                                                      );
+                                              var scaleAnimation = Tween(
+                                                begin: begin,
+                                                end: end,
+                                              ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                  var fadeAnimation =
-                                                      Tween(
-                                                        begin: 0.0,
-                                                        end: 1.0,
-                                                      ).animate(
-                                                        CurvedAnimation(
-                                                          parent: animation,
-                                                          curve: curve,
-                                                        ),
-                                                      );
+                                              var fadeAnimation = Tween(
+                                                begin: 0.0,
+                                                end: 1.0,
+                                              ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                  return ScaleTransition(
-                                                    scale: scaleAnimation,
-                                                    alignment:
-                                                        Alignment.bottomLeft,
-                                                    child: FadeTransition(
-                                                      opacity: fadeAnimation,
-                                                      child: child,
-                                                    ),
-                                                  );
-                                                },
-                                            transitionDuration: const Duration(
-                                              milliseconds: 400,
-                                            ),
-                                            reverseTransitionDuration:
-                                                const Duration(
-                                                  milliseconds: 300,
-                                                ),
+                                              return ScaleTransition(
+                                                scale: scaleAnimation,
+                                                alignment: Alignment.bottomLeft,
+                                                child: FadeTransition(opacity: fadeAnimation, child: child),
+                                              );
+                                            },
+                                            transitionDuration: const Duration(milliseconds: 400),
+                                            reverseTransitionDuration: const Duration(milliseconds: 300),
                                           ),
                                         );
                                       },
@@ -738,24 +524,18 @@ class _AppShellState extends State<AppShell> {
                                                 children: [
                                                   Icon(
                                                     Icons.settings_outlined,
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
+                                                    color: Theme.of(context).colorScheme.primary,
                                                     size: 20,
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Flexible(
                                                     child: Text(
                                                       context.loc('settings'),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                                      overflow: TextOverflow.ellipsis,
                                                       maxLines: 1,
                                                       style: TextStyle(
-                                                        color: Theme.of(
-                                                          context,
-                                                        ).colorScheme.primary,
-                                                        fontWeight:
-                                                            FontWeight.w500,
+                                                        color: Theme.of(context).colorScheme.primary,
+                                                        fontWeight: FontWeight.w500,
                                                       ),
                                                     ),
                                                   ),
@@ -763,9 +543,7 @@ class _AppShellState extends State<AppShell> {
                                               )
                                             : Icon(
                                                 Icons.settings_outlined,
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
+                                                color: Theme.of(context).colorScheme.primary,
                                                 size: 24,
                                               ),
                                       ),
@@ -780,12 +558,8 @@ class _AppShellState extends State<AppShell> {
                               _selectedServerConfig = _serverConfigs[index];
                             });
                           },
-                          selectedIndex:
-                              _selectedServerConfig != null &&
-                                  _serverConfigs.isNotEmpty
-                              ? _serverConfigs.indexWhere(
-                                  (s) => s.id == _selectedServerConfig!.id,
-                                )
+                          selectedIndex: _selectedServerConfig != null && _serverConfigs.isNotEmpty
+                              ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id)
                               : null,
                         ),
                       ),
@@ -794,10 +568,8 @@ class _AppShellState extends State<AppShell> {
                     // Resize Handle
                     MouseRegion(
                       cursor: SystemMouseCursors.resizeColumn,
-                      onEnter: (_) =>
-                          setState(() => _isHoveringResizeHandle = true),
-                      onExit: (_) =>
-                          setState(() => _isHoveringResizeHandle = false),
+                      onEnter: (_) => setState(() => _isHoveringResizeHandle = true),
+                      onExit: (_) => setState(() => _isHoveringResizeHandle = false),
                       child: GestureDetector(
                         onHorizontalDragUpdate: (details) {
                           setState(() {
@@ -822,9 +594,7 @@ class _AppShellState extends State<AppShell> {
                             child: Container(
                               width: 2,
                               color: _isHoveringResizeHandle
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withValues(alpha: 0.5)
+                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
                                   : Colors.transparent,
                             ),
                           ),
@@ -856,61 +626,29 @@ class _AppShellState extends State<AppShell> {
                                     Navigator.push(
                                       context,
                                       PageRouteBuilder(
-                                        pageBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                            ) => S3ConfigPage(
-                                              existingConfig:
-                                                  _selectedServerConfig!,
-                                              onSave: _loadConfigs,
-                                            ),
-                                        transitionsBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                              child,
-                                            ) {
-                                              const curve = Curves.easeOutQuart;
+                                        pageBuilder: (context, animation, secondaryAnimation) =>
+                                            S3ConfigPage(existingConfig: _selectedServerConfig!, onSave: _loadConfigs),
+                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                          const curve = Curves.easeOutQuart;
 
-                                              var scaleAnimation =
-                                                  Tween(
-                                                    begin: 0.0,
-                                                    end: 1.0,
-                                                  ).animate(
-                                                    CurvedAnimation(
-                                                      parent: animation,
-                                                      curve: curve,
-                                                    ),
-                                                  );
+                                          var scaleAnimation = Tween(
+                                            begin: 0.0,
+                                            end: 1.0,
+                                          ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                              var fadeAnimation =
-                                                  Tween(
-                                                    begin: 0.0,
-                                                    end: 1.0,
-                                                  ).animate(
-                                                    CurvedAnimation(
-                                                      parent: animation,
-                                                      curve: curve,
-                                                    ),
-                                                  );
+                                          var fadeAnimation = Tween(
+                                            begin: 0.0,
+                                            end: 1.0,
+                                          ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                              return ScaleTransition(
-                                                scale: scaleAnimation,
-                                                alignment: Alignment.topRight,
-                                                child: FadeTransition(
-                                                  opacity: fadeAnimation,
-                                                  child: child,
-                                                ),
-                                              );
-                                            },
-                                        transitionDuration: const Duration(
-                                          milliseconds: 400,
-                                        ),
-                                        reverseTransitionDuration:
-                                            const Duration(milliseconds: 300),
+                                          return ScaleTransition(
+                                            scale: scaleAnimation,
+                                            alignment: Alignment.topRight,
+                                            child: FadeTransition(opacity: fadeAnimation, child: child),
+                                          );
+                                        },
+                                        transitionDuration: const Duration(milliseconds: 400),
+                                        reverseTransitionDuration: const Duration(milliseconds: 300),
                                       ),
                                     );
                                   },
@@ -918,79 +656,40 @@ class _AppShellState extends State<AppShell> {
                               : AppComponents.emptyState(
                                   icon: Icons.cloud_off_outlined,
                                   title: context.loc('no_server_selected'),
-                                  subtitle: context.loc(
-                                    'select_server_to_start',
-                                  ),
+                                  subtitle: context.loc('select_server_to_start'),
                                   onAction: _serverConfigs.isEmpty
                                       ? () {
                                           Navigator.push(
                                             context,
                                             PageRouteBuilder(
-                                              pageBuilder:
-                                                  (
-                                                    context,
-                                                    animation,
-                                                    secondaryAnimation,
-                                                  ) => S3ConfigPage(
-                                                    onSave: _loadConfigs,
-                                                  ),
-                                              transitionsBuilder:
-                                                  (
-                                                    context,
-                                                    animation,
-                                                    secondaryAnimation,
-                                                    child,
-                                                  ) {
-                                                    const curve =
-                                                        Curves.easeOutQuart;
+                                              pageBuilder: (context, animation, secondaryAnimation) =>
+                                                  S3ConfigPage(onSave: _loadConfigs),
+                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                const curve = Curves.easeOutQuart;
 
-                                                    var scaleAnimation =
-                                                        Tween(
-                                                          begin: 0.0,
-                                                          end: 1.0,
-                                                        ).animate(
-                                                          CurvedAnimation(
-                                                            parent: animation,
-                                                            curve: curve,
-                                                          ),
-                                                        );
+                                                var scaleAnimation = Tween(
+                                                  begin: 0.0,
+                                                  end: 1.0,
+                                                ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                    var fadeAnimation =
-                                                        Tween(
-                                                          begin: 0.0,
-                                                          end: 1.0,
-                                                        ).animate(
-                                                          CurvedAnimation(
-                                                            parent: animation,
-                                                            curve: curve,
-                                                          ),
-                                                        );
+                                                var fadeAnimation = Tween(
+                                                  begin: 0.0,
+                                                  end: 1.0,
+                                                ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                                                    return ScaleTransition(
-                                                      scale: scaleAnimation,
-                                                      alignment:
-                                                          Alignment.topLeft,
-                                                      child: FadeTransition(
-                                                        opacity: fadeAnimation,
-                                                        child: child,
-                                                      ),
-                                                    );
-                                                  },
-                                              transitionDuration:
-                                                  const Duration(
-                                                    milliseconds: 400,
-                                                  ),
-                                              reverseTransitionDuration:
-                                                  const Duration(
-                                                    milliseconds: 300,
-                                                  ),
+                                                return ScaleTransition(
+                                                  scale: scaleAnimation,
+                                                  alignment: Alignment.topLeft,
+                                                  child: FadeTransition(opacity: fadeAnimation, child: child),
+                                                );
+                                              },
+                                              transitionDuration: const Duration(milliseconds: 400),
+                                              reverseTransitionDuration: const Duration(milliseconds: 300),
                                             ),
                                           );
                                         }
                                       : null,
-                                  actionText: _serverConfigs.isEmpty
-                                      ? context.loc('add_new_server')
-                                      : null,
+                                  actionText: _serverConfigs.isEmpty ? context.loc('add_new_server') : null,
                                 ),
                         ),
                       ),

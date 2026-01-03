@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'package:minio/minio.dart';
-import 'package:s3_ui/core/storage/storage_service.dart';
-import 'package:s3_ui/models/s3_server_config.dart';
-import 'package:s3_ui/r2_connection_helper.dart';
+import 'package:ploys3/core/storage/storage_service.dart';
+import 'package:ploys3/models/s3_server_config.dart';
+import 'package:ploys3/r2_connection_helper.dart';
 
 class S3StorageService implements StorageService {
   final S3ServerConfig _config;

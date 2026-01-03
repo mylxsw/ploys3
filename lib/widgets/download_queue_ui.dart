@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:s3_ui/core/localization.dart';
-import 'package:s3_ui/download_manager.dart';
-import 'package:s3_ui/core/design_system.dart';
+import 'package:ploys3/core/localization.dart';
+import 'package:ploys3/download_manager.dart';
+import 'package:ploys3/core/design_system.dart';
 import 'package:path/path.dart' as path;
 
 class DownloadQueueUI extends StatefulWidget {

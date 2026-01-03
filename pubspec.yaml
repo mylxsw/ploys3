@@ -1,5 +1,5 @@
-name: s3_ui
-description: "A new Flutter project."
+name: ploys3
+description: "Ploy S3 is a simple S3 manager."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -21,6 +21,7 @@ dependencies:
   desktop_drop: ^0.4.4
   intl: ^0.20.2
   bitsdojo_window: ^0.1.6
+  rename_app: ^1.6.5
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +29,19 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   build_runner: ^2.4.11
   json_serializable: ^6.8.0
+  change_app_package_name: ^1.5.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/app_icon.png
+    - assets/app_icon_dark_transparent.png
+    - assets/app_icon_macos.png
+    
+  fonts:
+    - family: AlibabaPuHuiTi
+      fonts:
+        - asset: assets/fonts/AlibabaPuHuiTi-3-55-Regular.ttf
+        - asset: assets/fonts/AlibabaPuHuiTi-3-85-Bold.ttf
+          weight: 700

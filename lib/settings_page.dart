@@ -1,11 +1,11 @@
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
-import 'package:s3_ui/core/design_system.dart';
-import 'package:s3_ui/core/theme_manager.dart';
-import 'package:s3_ui/core/language_manager.dart';
-import 'package:s3_ui/core/localization.dart';
+import 'package:ploys3/core/design_system.dart';
+import 'package:ploys3/core/theme_manager.dart';
+import 'package:ploys3/core/language_manager.dart';
+import 'package:ploys3/core/localization.dart';
 
-import 'package:s3_ui/widgets/window_title_bar.dart';
+import 'package:ploys3/widgets/window_title_bar.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

@@ -2,11 +2,11 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:s3_ui/models/s3_server_config.dart';
-import 'package:s3_ui/core/localization.dart';
-import 'package:s3_ui/core/design_system.dart';
+import 'package:ploys3/models/s3_server_config.dart';
+import 'package:ploys3/core/localization.dart';
+import 'package:ploys3/core/design_system.dart';
 
-import 'package:s3_ui/widgets/window_title_bar.dart';
+import 'package:ploys3/widgets/window_title_bar.dart';
 
 class S3ConfigPage extends StatefulWidget {
   final VoidCallback onSave;

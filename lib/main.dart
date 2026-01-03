@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:s3_ui/models/s3_server_config.dart';
-import 'package:s3_ui/s3_config_page.dart';
-import 'package:s3_ui/s3_browser_page.dart';
-import 'package:s3_ui/settings_page.dart';
-import 'package:s3_ui/core/design_system.dart';
-import 'package:s3_ui/core/theme_manager.dart';
-import 'package:s3_ui/core/language_manager.dart';
-import 'package:s3_ui/core/localization.dart';
+import 'package:ploys3/models/s3_server_config.dart';
+import 'package:ploys3/s3_config_page.dart';
+import 'package:ploys3/s3_browser_page.dart';
+import 'package:ploys3/settings_page.dart';
+import 'package:ploys3/core/design_system.dart';
+import 'package:ploys3/core/theme_manager.dart';
+import 'package:ploys3/core/language_manager.dart';
+import 'package:ploys3/core/localization.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'package:s3_ui/widgets/window_title_bar.dart';
+import 'package:ploys3/widgets/window_title_bar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

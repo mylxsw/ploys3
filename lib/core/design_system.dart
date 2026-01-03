@@ -11,6 +11,7 @@ class AppTheme {
     const cardColor = Color(0xFF242424);
 
     return ThemeData(
+      fontFamily: 'AlibabaPuHuiTi',
       brightness: Brightness.dark,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
@@ -200,6 +201,7 @@ class AppTheme {
     const cardColor = Colors.white;
 
     return ThemeData(
+      fontFamily: 'AlibabaPuHuiTi',
       brightness: Brightness.light,
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,

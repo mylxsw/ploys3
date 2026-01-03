@@ -4,17 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import 'package:s3_ui/models/s3_server_config.dart';
+import 'package:ploys3/models/s3_server_config.dart';
 
-import 'package:s3_ui/download_manager.dart';
-import 'package:s3_ui/widgets/loading_overlay.dart';
-import 'package:s3_ui/core/localization.dart';
-import 'package:s3_ui/core/upload_manager.dart';
-import 'package:s3_ui/widgets/upload_queue_ui.dart';
-import 'package:s3_ui/widgets/download_queue_ui.dart';
-import 'package:s3_ui/core/storage/storage_service.dart';
-import 'package:s3_ui/core/storage/s3_storage_service.dart';
-import 'package:s3_ui/core/design_system.dart';
+import 'package:ploys3/download_manager.dart';
+import 'package:ploys3/widgets/loading_overlay.dart';
+import 'package:ploys3/core/localization.dart';
+import 'package:ploys3/core/upload_manager.dart';
+import 'package:ploys3/widgets/upload_queue_ui.dart';
+import 'package:ploys3/widgets/download_queue_ui.dart';
+import 'package:ploys3/core/storage/storage_service.dart';
+import 'package:ploys3/core/storage/s3_storage_service.dart';
+import 'package:ploys3/core/design_system.dart';
 
 /// Represents an S3 object or directory prefix
 class S3Item {

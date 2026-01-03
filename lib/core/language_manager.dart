@@ -79,7 +79,7 @@ class LanguageManager extends ChangeNotifier {
       'info': '信息',
 
       // 主页面
-      's3_manager': 'S3 管理器',
+      's3_manager': 'Ploy S3',
       'add_new_server': '新服务器',
       'no_server_selected': '未选择服务器',
       'select_server_to_start': '选择一个服务器开始浏览',
@@ -164,8 +164,8 @@ class LanguageManager extends ChangeNotifier {
       'edit_server': '编辑服务器',
       'collapse': '收起',
       'expand': '展开',
-      'app_name_s3': 'S3',
-      'app_name_manager': '管理器',
+      'app_name_s3': 'Ploy S3',
+      'app_name_manager': 'Manager',
       'upload_failed': '上传失败：%s',
       'upload_success': '已上传 %s',
       'rename_object_title': '重命名对象',
@@ -258,7 +258,7 @@ class LanguageManager extends ChangeNotifier {
       'info': 'Info',
 
       // Main page
-      's3_manager': 'S3 Manager',
+      's3_manager': 'Ploy S3',
       'add_new_server': 'New Server',
       'no_server_selected': 'No Server Selected',
       'select_server_to_start':
@@ -347,8 +347,8 @@ class LanguageManager extends ChangeNotifier {
       'edit_server': 'Edit Server',
       'collapse': 'Collapse',
       'expand': 'Expand',
-      'app_name_s3': 'S3',
-      'app_name_manager': 'MANAGER',
+      'app_name_s3': 'Ploy S3',
+      'app_name_manager': 'Manager',
       'upload_failed': 'Upload failed: %s',
       'upload_success': 'Uploaded %s',
       'rename_object_title': 'Rename Object',

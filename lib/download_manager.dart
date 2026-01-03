@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'; // For debugPrint
-import 'package:s3_ui/core/storage/storage_service.dart';
+import 'package:ploys3/core/storage/storage_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 

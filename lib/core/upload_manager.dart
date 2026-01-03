@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:s3_ui/core/storage/storage_service.dart';
+import 'package:ploys3/core/storage/storage_service.dart';
 
 enum UploadStatus { pending, uploading, success, failed }
 

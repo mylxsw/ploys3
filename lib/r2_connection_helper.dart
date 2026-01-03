@@ -1,6 +1,6 @@
 import 'package:minio/minio.dart' as minio;
-import 'package:s3_ui/models/s3_server_config.dart';
-import 'package:s3_ui/core/language_manager.dart';
+import 'package:ploys3/models/s3_server_config.dart';
+import 'package:ploys3/core/language_manager.dart';
 
 class R2ConnectionHelper {
   /// Creates a properly configured MinIO client for Cloudflare R2

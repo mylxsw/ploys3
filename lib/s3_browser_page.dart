@@ -18,6 +18,12 @@ import 'package:ploys3/core/storage/storage_service.dart';
 import 'package:ploys3/core/storage/s3_storage_service.dart';
 import 'package:ploys3/core/design_system.dart';
 
+String _basenameFromKey(String key) {
+  final trimmed = key.replaceFirst(RegExp(r'/+$'), '');
+  if (trimmed.isEmpty) return '';
+  return trimmed.split('/').last;
+}
+
 /// Represents an S3 object or directory prefix
 class S3Item {
   final String key;
@@ -302,7 +308,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                '${context.loc('deleting_file', [fileName.split('/').last])}...',
+                '${context.loc('deleting_file', [_basenameFromKey(fileName)])}...',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -333,7 +339,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     if (showDialog && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.loc('downloading_file', [key.split('/').last])),
+          content: Text(context.loc('downloading_file', [_basenameFromKey(key)])),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -558,7 +564,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   title: Text(context.loc('copy_markdown'), style: Theme.of(context).textTheme.bodyMedium),
                   onTap: () {
                     final url = _buildFileUrl(key);
-                    final markdown = '![${key.split('/').last}]($url)';
+                    final markdown = '![${_basenameFromKey(key)}]($url)';
                     Clipboard.setData(ClipboardData(text: markdown));
                     ScaffoldMessenger.of(
                       dialogContext,
@@ -1264,7 +1270,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       ),
 
       // Search button
-      IconButton(icon: const Icon(Icons.search), onPressed: () {}, tooltip: 'Search'),
+      IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: 'Search'),
     ];
   }
 
@@ -1306,10 +1312,14 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   }
 
   Widget _buildListView() {
+    return _buildListViewForItems(_objects);
+  }
+
+  Widget _buildListViewForItems(List<S3Item> items) {
     return ListView.builder(
-      itemCount: _objects.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final object = _objects[index];
+        final object = items[index];
         final isSelected = _selectedItems.contains(object.key);
         final canSelect = !object.isDirectory;
 
@@ -1382,6 +1392,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   Widget _buildGridView() {
     final childAspectRatio = Platform.isMobile ? 0.82 : 1.0;
 
+    return _buildGridViewForItems(_objects, childAspectRatio: childAspectRatio);
+  }
+
+  Widget _buildGridViewForItems(List<S3Item> items, {required double childAspectRatio}) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
@@ -1390,9 +1404,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
-      itemCount: _objects.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final object = _objects[index];
+        final object = items[index];
         final isSelected = _selectedItems.contains(object.key);
 
         return Card(
@@ -1477,6 +1491,201 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                       shape: const CircleBorder(),
                     ),
                   ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showSearchDialog() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 24, offset: const Offset(0, 12)),
+                ],
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Search files',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Enter keyword',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onSubmitted: (value) => Navigator.pop(context, value),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Search in current list',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: () => Navigator.pop(context, controller.text),
+                          icon: const Icon(Icons.search),
+                          label: const Text('Search'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    final trimmed = query?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+
+    _showSearchResults(trimmed);
+  }
+
+  void _showSearchResults(String query) {
+    final lowerQuery = query.toLowerCase();
+    final results =
+        _objects.where((item) => _basenameFromKey(item.key).toLowerCase().contains(lowerQuery)).toList();
+    final childAspectRatio = Platform.isMobile ? 0.82 : 1.0;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final dialogWidth = size.width * 0.9;
+        final dialogHeight = size.height * 0.85;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Container(
+            width: dialogWidth,
+            height: dialogHeight,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 30, offset: const Offset(0, 14)),
+              ],
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Search results',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '"$query" · ${results.length} result${results.length == 1 ? '' : 's'}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: results.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 48,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(height: 12),
+                                Text('No results found', style: Theme.of(context).textTheme.bodyMedium),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Try a different keyword',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : (_isGridView
+                              ? _buildGridViewForItems(results, childAspectRatio: childAspectRatio)
+                              : _buildListViewForItems(results)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1822,7 +2031,7 @@ class _PreviewContentState extends State<_PreviewContent> {
           _copyToClipboard(url, 'URL copied to clipboard');
           break;
         case 'markdown':
-          final markdown = '![${widget.object.key.split('/').last}]($url)';
+          final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
           _copyToClipboard(markdown, 'Markdown copied to clipboard');
           break;
       }
@@ -1841,7 +2050,7 @@ class _PreviewContentState extends State<_PreviewContent> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded: ${widget.object.key.split('/').last}'),
+            content: Text('Downloaded: ${_basenameFromKey(widget.object.key)}'),
             action: SnackBarAction(label: 'OK', onPressed: () {}),
           ),
         );

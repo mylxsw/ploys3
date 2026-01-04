@@ -1180,17 +1180,57 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
 
     return [
-      // Create folder button
-      IconButton(
-        icon: const Icon(Icons.create_new_folder_outlined),
-        onPressed: _isUploading ? null : _createFolder,
-        tooltip: 'Create folder',
-      ),
-      // Upload button
-      IconButton(
-        icon: const Icon(Icons.cloud_upload_outlined),
-        onPressed: _isUploading ? null : _uploadFile,
-        tooltip: 'Upload file',
+      PopupMenuButton<String>(
+        enabled: !_isUploading,
+        borderRadius: BorderRadius.circular(8),
+        tooltip: 'Add',
+        position: PopupMenuPosition.under,
+        child: SizedBox(
+          height: kMinInteractiveDimension,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, color: Theme.of(context).iconTheme.color),
+                  const SizedBox(width: 2),
+                  Icon(Icons.arrow_drop_down, color: Theme.of(context).iconTheme.color, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+        onSelected: (value) {
+          if (_isUploading) return;
+          if (value == 'folder') {
+            _createFolder();
+          } else if (value == 'upload') {
+            _uploadFile();
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'folder',
+            child: Row(
+              children: [
+                const Icon(Icons.create_new_folder_outlined, size: 18),
+                const SizedBox(width: 8),
+                const Text('Create folder'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'upload',
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_upload_outlined, size: 18),
+                const SizedBox(width: 8),
+                const Text('Upload file'),
+              ],
+            ),
+          ),
+        ],
       ),
       // Selection mode toggle
       IconButton(
@@ -1313,6 +1353,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
             trailing: PopupMenuButton<String>(
+              position: PopupMenuPosition.under,
               onSelected: (value) => _handleContextMenuSelection(context, value, object),
               itemBuilder: (context) => _buildContextMenuItems(object),
             ),

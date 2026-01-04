@@ -934,7 +934,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                         },
                         icon: const Icon(Icons.home),
                         tooltip: 'Home',
-                        style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
                       ),
                       if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
                         const SizedBox(width: 8),
@@ -1232,6 +1231,17 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
         ],
       ),
+      // Refresh button
+      IconButton(
+        icon: const Icon(Icons.loop),
+        onPressed: _isLoading || _isRefreshing
+            ? null
+            : () {
+                _clearCache();
+                _listObjects(prefix: _currentPrefix);
+              },
+        tooltip: 'Refresh',
+      ),
       // Selection mode toggle
       IconButton(
         icon: const Icon(Icons.checklist),
@@ -1253,17 +1263,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         tooltip: _isGridView ? 'List view' : 'Grid view',
       ),
 
-      // Refresh button
-      IconButton(
-        icon: const Icon(Icons.loop),
-        onPressed: _isLoading || _isRefreshing
-            ? null
-            : () {
-                _clearCache();
-                _listObjects(prefix: _currentPrefix);
-              },
-        tooltip: 'Refresh',
-      ),
+      // Search button
+      IconButton(icon: const Icon(Icons.search), onPressed: () {}, tooltip: 'Search'),
     ];
   }
 

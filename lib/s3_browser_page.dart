@@ -916,108 +916,106 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             Column(
               children: [
                 // Breadcrumb navigation
-                if (_currentPrefix.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        // Home button to return to root
-                        if (_currentPrefix.isNotEmpty || _prefixHistory.isNotEmpty)
-                          IconButton(
-                            onPressed: () {
-                              // Clear prefix history and go to root
-                              setState(() {
-                                _prefixHistory.clear();
-                                _currentPrefix = '';
-                                _objects = [];
-                                _isLoading = true;
-                              });
-                              _listObjects(prefix: '');
-                            },
-                            icon: const Icon(Icons.home),
-                            tooltip: 'Home',
-                            style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
-                          ),
-                        if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
-                          const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                // Split prefix into parts and create clickable breadcrumbs
-                                ..._currentPrefix
-                                    .split('/')
-                                    .where((part) => part.isNotEmpty)
-                                    .toList()
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                      final index = entry.key;
-                                      final part = entry.value;
-                                      final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
-                                      final isLast = index == parts.length - 1;
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      // Home button to return to root
+                      IconButton(
+                        onPressed: () {
+                          // Clear prefix history and go to root
+                          setState(() {
+                            _prefixHistory.clear();
+                            _currentPrefix = '';
+                            _objects = [];
+                            _isLoading = true;
+                          });
+                          _listObjects(prefix: '');
+                        },
+                        icon: const Icon(Icons.home),
+                        tooltip: 'Home',
+                        style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
+                      ),
+                      if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
+                        const SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              // Split prefix into parts and create clickable breadcrumbs
+                              ..._currentPrefix
+                                  .split('/')
+                                  .where((part) => part.isNotEmpty)
+                                  .toList()
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                    final index = entry.key;
+                                    final part = entry.value;
+                                    final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
+                                    final isLast = index == parts.length - 1;
 
-                                      // Reconstruct path for this segment
-                                      final pathParts = parts.sublist(0, index + 1);
-                                      final path = '${pathParts.join('/')}/';
+                                    // Reconstruct path for this segment
+                                    final pathParts = parts.sublist(0, index + 1);
+                                    final path = '${pathParts.join('/')}/';
 
-                                      return Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (index > 0)
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              child: Icon(
-                                                Icons.chevron_right,
-                                                size: 16,
-                                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                              ),
-                                            ),
-                                          InkWell(
-                                            onTap: isLast ? null : () => _navigateToDirectory(path),
-                                            borderRadius: BorderRadius.circular(4),
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                              child: Text(
-                                                part,
-                                                style: isLast
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)
-                                                    : Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                        color: Theme.of(context).colorScheme.primary,
-                                                        decoration: TextDecoration.underline,
-                                                      ),
-                                              ),
+                                    return Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (index > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                                            child: Icon(
+                                              Icons.chevron_right,
+                                              size: 16,
+                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                             ),
                                           ),
-                                        ],
-                                      );
-                                    }),
-                              ],
-                            ),
+                                        InkWell(
+                                          onTap: isLast ? null : () => _navigateToDirectory(path),
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            child: Text(
+                                              part,
+                                              style: isLast
+                                                  ? Theme.of(
+                                                      context,
+                                                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)
+                                                  : Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                      color: Theme.of(context).colorScheme.primary,
+                                                      decoration: TextDecoration.underline,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }),
+                            ],
                           ),
                         ),
-                        // Back button (up to parent)
-                        if (_currentPrefix.isNotEmpty)
-                          IconButton(
-                            onPressed: () {
-                              // Navigate to parent directory
-                              final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
-                              if (parts.isNotEmpty) {
-                                parts.removeLast();
-                                final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
-                                _navigateToDirectory(parentPath);
-                              }
-                            },
-                            icon: const Icon(Icons.arrow_upward),
-                            tooltip: 'Up to parent',
-                            style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
-                          ),
-                      ],
-                    ),
+                      ),
+                      // Back button (up to parent)
+                      if (_currentPrefix.isNotEmpty)
+                        IconButton(
+                          onPressed: () {
+                            // Navigate to parent directory
+                            final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
+                            if (parts.isNotEmpty) {
+                              parts.removeLast();
+                              final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
+                              _navigateToDirectory(parentPath);
+                            }
+                          },
+                          icon: const Icon(Icons.arrow_upward),
+                          tooltip: 'Up to parent',
+                          style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
+                        ),
+                    ],
                   ),
+                ),
 
                 // Objects list/grid
                 Expanded(
@@ -1274,90 +1272,66 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         final isSelected = _selectedItems.contains(object.key);
         final canSelect = !object.isDirectory;
 
-        return ListTile(
-          leading: _isSelectionMode
-              ? Checkbox(
-                  value: isSelected,
-                  onChanged: canSelect
-                      ? (value) {
-                          setState(() {
-                            if (value == true) {
-                              _selectedItems.add(object.key);
-                            } else {
-                              _selectedItems.remove(object.key);
-                            }
-                          });
-                        }
-                      : null,
-                )
-              : Icon(
-                  _getFileIcon(object.key, isDirectory: object.isDirectory),
-                  color: object.isDirectory
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-          title: Text(
-            object.key.startsWith(_currentPrefix) ? object.key.substring(_currentPrefix.length) : object.key,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          subtitle: object.isDirectory
-              ? null
-              : Text(
-                  '${_formatBytes(object.size ?? 0, 1)} • ${DateFormat('yyyy-MM-dd HH:mm').format(object.lastModified ?? DateTime.now())}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-          trailing: PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'download') {
-                _downloadObject(object.key);
-              } else if (value == 'copy') {
-                // Check if it's an image
-                final isImage = RegExp(
-                  r'\.(jpg|jpeg|png|gif|bmp|webp|svg)$',
-                  caseSensitive: false,
-                ).hasMatch(object.key);
-                if (isImage) {
-                  _showFileListCopyMenu(object.key, true);
-                } else {
-                  // For non-image files, copy URL directly
-                  final url = _buildFileUrl(object.key);
-                  Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
-                }
-              } else if (value == 'rename') {
-                _renameObject(object.key);
-              } else if (value == 'delete') {
-                if (object.isDirectory) {
-                  _deleteFolder(object.key);
-                } else {
-                  _deleteObject(object.key);
-                }
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onSecondaryTapDown: (details) {
+            _showItemContextMenu(context, details.globalPosition, object);
+          },
+          onLongPressStart: (details) {
+            _showItemContextMenu(context, details.globalPosition, object);
+          },
+          child: ListTile(
+            leading: _isSelectionMode
+                ? Checkbox(
+                    value: isSelected,
+                    onChanged: canSelect
+                        ? (value) {
+                            setState(() {
+                              if (value == true) {
+                                _selectedItems.add(object.key);
+                              } else {
+                                _selectedItems.remove(object.key);
+                              }
+                            });
+                          }
+                        : null,
+                  )
+                : Icon(
+                    _getFileIcon(object.key, isDirectory: object.isDirectory),
+                    color: object.isDirectory
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+            title: Text(
+              object.key.startsWith(_currentPrefix) ? object.key.substring(_currentPrefix.length) : object.key,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            subtitle: object.isDirectory
+                ? null
+                : Text(
+                    '${_formatBytes(object.size ?? 0, 1)} • ${DateFormat('yyyy-MM-dd HH:mm').format(object.lastModified ?? DateTime.now())}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+            trailing: PopupMenuButton<String>(
+              onSelected: (value) => _handleContextMenuSelection(context, value, object),
+              itemBuilder: (context) => _buildContextMenuItems(object),
+            ),
+            onTap: () {
+              if (_isSelectionMode && !object.isDirectory) {
+                setState(() {
+                  if (isSelected) {
+                    _selectedItems.remove(object.key);
+                  } else {
+                    _selectedItems.add(object.key);
+                  }
+                });
+              } else if (object.isDirectory) {
+                _navigateToDirectory(object.key);
+              } else {
+                _showFilePreview(object);
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'download', child: Text('Download')),
-              if (!object.isDirectory) ...[
-                const PopupMenuItem(value: 'copy', child: Text('Copy URL')),
-                const PopupMenuItem(value: 'rename', child: Text('Rename')),
-              ],
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
           ),
-          onTap: () {
-            if (_isSelectionMode && !object.isDirectory) {
-              setState(() {
-                if (isSelected) {
-                  _selectedItems.remove(object.key);
-                } else {
-                  _selectedItems.add(object.key);
-                }
-              });
-            } else if (object.isDirectory) {
-              _navigateToDirectory(object.key);
-            } else {
-              _showFilePreview(object);
-            }
-          },
         );
       },
     );
@@ -1467,6 +1441,66 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         );
       },
     );
+  }
+
+  List<PopupMenuEntry<String>> _buildContextMenuItems(S3Item object) {
+    return [
+      const PopupMenuItem(value: 'download', child: Text('Download')),
+      if (!object.isDirectory) ...[
+        const PopupMenuItem(value: 'copy', child: Text('Copy URL')),
+        const PopupMenuItem(value: 'rename', child: Text('Rename')),
+        const PopupMenuItem(value: 'select', child: Text('Select')),
+      ],
+      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+    ];
+  }
+
+  void _handleContextMenuSelection(BuildContext context, String value, S3Item object) {
+    if (value == 'download') {
+      _downloadObject(object.key);
+    } else if (value == 'copy') {
+      final isImage = RegExp(r'\.(jpg|jpeg|png|gif|bmp|webp|svg)$', caseSensitive: false).hasMatch(object.key);
+      if (isImage) {
+        _showFileListCopyMenu(object.key, true);
+      } else {
+        final url = _buildFileUrl(object.key);
+        Clipboard.setData(ClipboardData(text: url));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+      }
+    } else if (value == 'rename') {
+      _renameObject(object.key);
+    } else if (value == 'select') {
+      if (!object.isDirectory) {
+        setState(() {
+          _isSelectionMode = true;
+          _selectedItems.add(object.key);
+        });
+      }
+    } else if (value == 'delete') {
+      if (object.isDirectory) {
+        _deleteFolder(object.key);
+      } else {
+        _deleteObject(object.key);
+      }
+    }
+  }
+
+  void _showItemContextMenu(BuildContext context, Offset position, S3Item object) {
+    final overlay = Navigator.of(context).overlay;
+    if (overlay == null) return;
+    final renderObject = overlay.context.findRenderObject();
+    if (renderObject is! RenderBox) return;
+
+    final items = _buildContextMenuItems(object);
+    if (items.isEmpty) return;
+
+    final relativeRect = RelativeRect.fromRect(Rect.fromPoints(position, position), Offset.zero & renderObject.size);
+
+    showMenu<String>(context: context, position: relativeRect, items: items).then((value) {
+      if (value != null) {
+        _handleContextMenuSelection(context, value, object);
+      }
+    });
   }
 
   IconData _getFileIcon(String key, {required bool isDirectory}) {

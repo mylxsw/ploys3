@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:ploys3/core/platform.dart';
 
 import 'package:ploys3/models/s3_server_config.dart';
 
@@ -600,9 +601,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     // Check if it's an image
     final isImage = RegExp(r'\.(jpg|jpeg|png|gif|bmp|webp|svg)$', caseSensitive: false).hasMatch(object.key);
 
-    final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
-
-    if (isMobilePlatform) {
+    if (Platform.isMobile) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -829,8 +828,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
-
     if (_initError != null) {
       return Scaffold(
         appBar: AppBar(
@@ -848,7 +845,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ],
           elevation: 0,
           scrolledUnderElevation: 0,
-          centerTitle: isMobilePlatform,
+          centerTitle: Platform.isMobile,
         ),
         body: Center(
           child: Column(
@@ -883,8 +880,8 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         leadingWidth: _headerLeadingWidth,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: isMobilePlatform,
-        actions: isMobilePlatform
+        centerTitle: Platform.isMobile,
+        actions: Platform.isMobile
             ? [
                 if (_isSelectionMode)
                   IconButton(
@@ -900,7 +897,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               ]
             : _buildActionButtons(context),
       ),
-      bottomNavigationBar: isMobilePlatform ? _buildBottomMenu(context) : null,
+      bottomNavigationBar: Platform.isMobile ? _buildBottomMenu(context) : null,
       body: DropTarget(
         onDragDone: _handleDragDone,
         onDragEntered: (details) {
@@ -1367,8 +1364,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   }
 
   Widget _buildGridView() {
-    final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
-    final childAspectRatio = isMobilePlatform ? 0.82 : 1.0;
+    final childAspectRatio = Platform.isMobile ? 0.82 : 1.0;
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -1826,13 +1822,7 @@ class _PreviewContentState extends State<_PreviewContent> {
               children: [
                 IconButton(
                   icon: Icon(
-                    const [
-                          TargetPlatform.windows,
-                          TargetPlatform.macOS,
-                          TargetPlatform.linux,
-                        ].contains(defaultTargetPlatform)
-                        ? Icons.close
-                        : Icons.arrow_back_ios,
+                    Platform.isDesktop ? Icons.close : Icons.arrow_back_ios,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   onPressed: widget.onClose,

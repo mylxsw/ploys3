@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:ploys3/core/platform.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:ploys3/models/s3_server_config.dart';
@@ -30,7 +31,7 @@ void main() {
 
   runApp(const App());
 
-  if (const [TargetPlatform.windows, TargetPlatform.macOS, TargetPlatform.linux].contains(defaultTargetPlatform)) {
+  if (Platform.isDesktop) {
     doWhenWindowReady(() {
       const initialSize = Size(1280, 800);
       appWindow.minSize = const Size(800, 600);
@@ -187,8 +188,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
-        final useDrawer = isMobilePlatform;
+        final useDrawer = Platform.isMobile;
 
         // Auto-collapse if width is small
         if (!useDrawer && constraints.maxWidth < 600 && _isSidebarExtended) {
@@ -310,7 +310,7 @@ class _AppShellState extends State<AppShell> {
             children: [
               if (isSidebarExtended)
                 SizedBox(
-                  height: 60,
+                  height: Platform.isMobile ? 80 : 60,
                   width: sidebarWidth,
                   child: Stack(
                     children: [
@@ -331,28 +331,16 @@ class _AppShellState extends State<AppShell> {
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.cloud_outlined, size: 20, color: Colors.white),
+                              child: Icon(Icons.cloud_outlined, size: Platform.isMobile ? 40 : 20, color: Colors.white),
                             ),
                             const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  context.loc('app_name_s3'),
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                                Text(
-                                  context.loc('app_name_manager'),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    fontSize: AppFontSizes.xs,
-                                    letterSpacing: 2,
-                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              context.loc('app_name_s3'),
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: Platform.isMobile ? AppFontSizes.xxxl : AppFontSizes.lg,
+                              ),
                             ),
                           ],
                         ),
@@ -379,7 +367,7 @@ class _AppShellState extends State<AppShell> {
                         ),
                       if (isDrawer)
                         Positioned(
-                          top: 15,
+                          top: 25,
                           right: 30,
                           child: Center(
                             child: Tooltip(
@@ -508,6 +496,32 @@ class _AppShellState extends State<AppShell> {
           indicatorColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
           indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           destinations: [
+            NavigationRailDestination(
+              icon: Icon(
+                Icons.home_outlined,
+                size: 25,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              selectedIcon: Icon(Icons.home_filled, size: 25, color: Theme.of(context).colorScheme.primary),
+              label: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: sidebarWidth - 80, // Prevent overflow
+                ),
+                child: Text(
+                  context.loc('home'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: AppFontSizes.md,
+                    fontWeight: _selectedServerConfig == null ? FontWeight.w600 : FontWeight.normal,
+                    color: _selectedServerConfig == null
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
             ..._serverConfigs.map((server) {
               final isSelected = _selectedServerConfig?.id == server.id;
               return NavigationRailDestination(
@@ -597,13 +611,13 @@ class _AppShellState extends State<AppShell> {
           ),
           onDestinationSelected: (index) {
             setState(() {
-              _selectedServerConfig = _serverConfigs[index];
+              _selectedServerConfig = index <= 0 ? null : _serverConfigs[index - 1];
             });
             onDrawerClose?.call();
           },
           selectedIndex: _selectedServerConfig != null && _serverConfigs.isNotEmpty
-              ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id)
-              : null,
+              ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id) + 1
+              : 0,
         ),
       ),
     );
@@ -657,24 +671,95 @@ class _AppShellState extends State<AppShell> {
                         ],
                       )
                     : null,
-                body: AppComponents.emptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: context.loc('no_server_selected'),
-                  subtitle: context.loc('select_server_to_start'),
-                  onAction: _serverConfigs.isEmpty
-                      ? () {
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) =>
-                                  S3ConfigPage(onSave: _loadConfigs),
-                            ),
-                          );
-                        }
-                      : null,
-                  actionText: _serverConfigs.isEmpty ? context.loc('add_new_server') : null,
-                ),
+                body: _serverConfigs.isEmpty ? _buildEmptyState(context) : _buildServerPicker(context),
               ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return AppComponents.emptyState(
+      icon: Icons.cloud_off_outlined,
+      title: context.loc('no_server_selected'),
+      subtitle: context.loc('select_server_to_start'),
+      onAction: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => S3ConfigPage(onSave: _loadConfigs)),
+        );
+      },
+      actionText: context.loc('add_new_server'),
+    );
+  }
+
+  Widget _buildServerPicker(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.all(10),
+            child: Text(
+              context.loc('select_server_to_start'),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _serverConfigs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final server = _serverConfigs[index];
+                return AppComponents.card(
+                  onTap: () {
+                    setState(() {
+                      _selectedServerConfig = server;
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.cloud_outlined, color: Theme.of(context).colorScheme.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              server.name,
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              server.bucket,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 16),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

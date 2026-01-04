@@ -246,10 +246,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _setThemeMode(value);
           }
         },
-        items: const [
-          DropdownMenuItem(value: AppThemeMode.light, child: Text('Light')),
-          DropdownMenuItem(value: AppThemeMode.system, child: Text('Auto')),
-          DropdownMenuItem(value: AppThemeMode.dark, child: Text('Dark')),
+        items: [
+          DropdownMenuItem(value: AppThemeMode.light, child: Text(context.loc('theme_light'))),
+          DropdownMenuItem(value: AppThemeMode.system, child: Text(context.loc('theme_system'))),
+          DropdownMenuItem(value: AppThemeMode.dark, child: Text(context.loc('theme_dark'))),
         ],
       ),
     );
@@ -260,10 +260,10 @@ class _SettingsPageState extends State<SettingsPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SegmentedButton<AppThemeMode>(
-          segments: const [
-            ButtonSegment(value: AppThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
-            ButtonSegment(value: AppThemeMode.system, label: Text('Auto'), icon: Icon(Icons.auto_mode)),
-            ButtonSegment(value: AppThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
+          segments: [
+            ButtonSegment(value: AppThemeMode.light, label: Text(context.loc('theme_light')), icon: Icon(Icons.light_mode)),
+            ButtonSegment(value: AppThemeMode.system, label: Text(context.loc('theme_system')), icon: Icon(Icons.auto_mode)),
+            ButtonSegment(value: AppThemeMode.dark, label: Text(context.loc('theme_dark')), icon: Icon(Icons.dark_mode)),
           ],
           selected: {_themeMode},
           onSelectionChanged: (Set<AppThemeMode> newSelection) {

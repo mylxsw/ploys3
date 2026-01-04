@@ -859,7 +859,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text('Failed to initialize connection', style: Theme.of(context).textTheme.titleLarge),
+              Text(context.loc('init_connection_failed'), style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -881,7 +881,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     return Scaffold(
       appBar: AppBar(
         title: _isSelectionMode
-            ? Text('${_selectedItems.length} selected')
+            ? Text(context.loc('selected_count', [_selectedItems.length.toString()]))
             : (Platform.isMobile ? Text(widget.serverConfig.name) : _buildBreadcrumbBar(inAppBar: true)),
         backgroundColor: Colors.transparent,
         leading: _buildHeaderLeading(context),
@@ -900,7 +900,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                         _selectedItems.clear();
                       });
                     },
-                    tooltip: 'Cancel selection',
+                    tooltip: context.loc('cancel_selection'),
                   ),
               ]
             : _buildActionButtons(context),
@@ -944,13 +944,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                                       const SizedBox(height: 16),
                                       Text(
                                         _currentPrefix.isEmpty
-                                            ? 'No objects in bucket'
-                                            : 'No objects in this directory',
+                                            ? context.loc('no_objects_in_bucket')
+                                            : context.loc('no_objects_in_directory'),
                                         style: Theme.of(context).textTheme.titleMedium,
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Try refreshing if you expect files here',
+                                        context.loc('try_refreshing_hint'),
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                         ),
@@ -962,7 +962,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                                           _listObjects(prefix: _currentPrefix);
                                         },
                                         icon: const Icon(Icons.refresh),
-                                        label: const Text('Refresh Now'),
+                                        label: Text(context.loc('refresh_now')),
                                       ),
                                     ],
                                   ),
@@ -992,7 +992,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                         Icon(Icons.cloud_upload, size: 64, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(height: 16),
                         Text(
-                          'Drop files here to upload',
+                          context.loc('drop_files_to_upload'),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontSize: AppFontSizes.xl,
@@ -1043,7 +1043,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   _selectedItems.clear();
                 });
               },
-              tooltip: 'Cancel selection',
+              tooltip: context.loc('cancel_selection'),
             ),
         ],
       ),
@@ -1070,19 +1070,19 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               }
             });
           },
-          tooltip: 'Select all',
+          tooltip: context.loc('select_all'),
         ),
         // Batch download
         IconButton(
           icon: const Icon(Icons.download),
           onPressed: _selectedItems.isEmpty ? null : _batchDownload,
-          tooltip: 'Download selected',
+          tooltip: context.loc('download_selected'),
         ),
         // Batch delete
         IconButton(
           icon: Icon(Icons.delete, color: _selectedItems.isEmpty ? null : Theme.of(context).colorScheme.error),
           onPressed: _selectedItems.isEmpty ? null : _batchDelete,
-          tooltip: 'Delete selected',
+          tooltip: context.loc('delete_selected'),
         ),
       ];
     }
@@ -1090,7 +1090,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     final addButton = PopupMenuButton<String>(
       enabled: !_isUploading,
       borderRadius: BorderRadius.circular(8),
-      tooltip: 'Add',
+      tooltip: context.loc('add'),
       position: PopupMenuPosition.under,
       child: SizedBox(
         height: kMinInteractiveDimension,
@@ -1123,7 +1123,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             children: [
               const Icon(Icons.create_new_folder_outlined, size: 18),
               const SizedBox(width: 8),
-              const Text('Create folder'),
+              Text(context.loc('create_folder')),
             ],
           ),
         ),
@@ -1133,7 +1133,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             children: [
               const Icon(Icons.cloud_upload_outlined, size: 18),
               const SizedBox(width: 8),
-              const Text('Upload file'),
+              Text(context.loc('upload_file')),
             ],
           ),
         ),
@@ -1152,7 +1152,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   _clearCache();
                   _listObjects(prefix: _currentPrefix);
                 },
-          tooltip: 'Refresh',
+          tooltip: context.loc('refresh'),
         ),
         // Selection mode toggle
         IconButton(
@@ -1162,7 +1162,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               _isSelectionMode = true;
             });
           },
-          tooltip: 'Select files',
+          tooltip: context.loc('select_files'),
         ),
         // View toggle button
         IconButton(
@@ -1172,16 +1172,16 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               _isGridView = !_isGridView;
             });
           },
-          tooltip: _isGridView ? 'List view' : 'Grid view',
+          tooltip: _isGridView ? context.loc('list_view') : context.loc('grid_view'),
         ),
         // Search button
-        IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: 'Search'),
+        IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: context.loc('search')),
       ];
     }
 
     final moreActions = PopupMenuButton<String>(
       borderRadius: BorderRadius.circular(8),
-      tooltip: 'Actions',
+      tooltip: context.loc('actions'),
       position: PopupMenuPosition.under,
       child: SizedBox(
         height: kMinInteractiveDimension,
@@ -1211,12 +1211,18 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         PopupMenuItem(
           value: 'refresh',
           enabled: !(_isLoading || _isRefreshing),
-          child: Row(children: [const Icon(Icons.loop, size: 18), const SizedBox(width: 8), const Text('Refresh')]),
+          child: Row(
+            children: [const Icon(Icons.loop, size: 18), const SizedBox(width: 8), Text(context.loc('refresh'))],
+          ),
         ),
         PopupMenuItem(
           value: 'select',
           child: Row(
-            children: [const Icon(Icons.checklist, size: 18), const SizedBox(width: 8), const Text('Select files')],
+            children: [
+              const Icon(Icons.checklist, size: 18),
+              const SizedBox(width: 8),
+              Text(context.loc('select_files')),
+            ],
           ),
         ),
         PopupMenuItem(
@@ -1225,7 +1231,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
             children: [
               Icon(_isGridView ? Icons.list : Icons.grid_view, size: 18),
               const SizedBox(width: 8),
-              Text(_isGridView ? 'List view' : 'Grid view'),
+              Text(_isGridView ? context.loc('list_view') : context.loc('grid_view')),
             ],
           ),
         ),
@@ -1235,7 +1241,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     return [
       addButton,
       // Search button
-      IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: 'Search'),
+      IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: context.loc('search')),
       moreActions,
     ];
   }
@@ -1494,7 +1500,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Search files',
+                            context.loc('search_files_title'),
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -1507,7 +1513,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                       autofocus: true,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Enter keyword',
+                        hintText: context.loc('search_hint'),
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -1521,7 +1527,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Search in current list',
+                      context.loc('search_in_current_list'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
@@ -1530,12 +1536,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.loc('cancel'))),
                         const SizedBox(width: 8),
                         FilledButton.icon(
                           onPressed: () => Navigator.pop(context, controller.text),
                           icon: const Icon(Icons.search),
-                          label: const Text('Search'),
+                          label: Text(context.loc('search')),
                         ),
                       ],
                     ),
@@ -1605,11 +1611,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Search results',
+                              context.loc('search_results_title'),
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                             ),
                             Text(
-                              '"$query" · ${results.length} result${results.length == 1 ? '' : 's'}',
+                              results.length == 1
+                                  ? context.loc('search_results_count_single', [query, results.length.toString()])
+                                  : context.loc('search_results_count_multi', [query, results.length.toString()]),
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
@@ -1635,10 +1643,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                                 ),
                                 const SizedBox(height: 12),
-                                Text('No results found', style: Theme.of(context).textTheme.bodyMedium),
+                                Text(context.loc('no_results_found'), style: Theme.of(context).textTheme.bodyMedium),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Try a different keyword',
+                                  context.loc('try_different_keyword'),
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
@@ -1679,7 +1687,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               _listObjects(prefix: '');
             },
             icon: const Icon(Icons.home),
-            tooltip: 'Home',
+            tooltip: context.loc('home'),
           ),
           if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
             const SizedBox(width: 8),
@@ -1747,7 +1755,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 }
               },
               icon: const Icon(Icons.arrow_upward),
-              tooltip: 'Up to parent',
+              tooltip: context.loc('up_to_parent'),
               style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
             ),
         ],
@@ -1757,13 +1765,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   List<PopupMenuEntry<String>> _buildContextMenuItems(S3Item object) {
     return [
-      const PopupMenuItem(value: 'download', child: Text('Download')),
+      PopupMenuItem(value: 'download', child: Text(context.loc('download'))),
       if (!object.isDirectory) ...[
-        const PopupMenuItem(value: 'copy', child: Text('Copy URL')),
-        const PopupMenuItem(value: 'rename', child: Text('Rename')),
-        const PopupMenuItem(value: 'select', child: Text('Select')),
+        PopupMenuItem(value: 'copy', child: Text(context.loc('copy_url'))),
+        PopupMenuItem(value: 'rename', child: Text(context.loc('rename'))),
+        PopupMenuItem(value: 'select', child: Text(context.loc('select'))),
       ],
-      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+      PopupMenuItem(value: 'delete', child: Text(context.loc('delete'))),
     ];
   }
 
@@ -1777,7 +1785,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       } else {
         final url = _buildFileUrl(object.key);
         Clipboard.setData(ClipboardData(text: url));
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('URL copied to clipboard')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.loc('url_copied'))));
       }
     } else if (value == 'rename') {
       _renameObject(object.key);
@@ -2034,9 +2042,9 @@ class _PreviewContentState extends State<_PreviewContent> {
         setState(() {
           _isLoadingImage = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load image: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.loc('load_image_failed', [e.toString()])), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -2071,14 +2079,14 @@ class _PreviewContentState extends State<_PreviewContent> {
       context: context,
       position: position,
       items: [
-        const PopupMenuItem<String>(
+        PopupMenuItem<String>(
           value: 'url',
-          child: ListTile(leading: Icon(Icons.link), title: Text('Copy URL'), dense: true),
+          child: ListTile(leading: Icon(Icons.link), title: Text(context.loc('copy_url')), dense: true),
         ),
         if (widget.isImage) ...[
-          const PopupMenuItem<String>(
+          PopupMenuItem<String>(
             value: 'markdown',
-            child: ListTile(leading: Icon(Icons.image), title: Text('Copy Markdown'), dense: true),
+            child: ListTile(leading: Icon(Icons.image), title: Text(context.loc('copy_markdown')), dense: true),
           ),
         ],
       ],
@@ -2089,11 +2097,11 @@ class _PreviewContentState extends State<_PreviewContent> {
 
       switch (value) {
         case 'url':
-          _copyToClipboard(url, 'URL copied to clipboard');
+          _copyToClipboard(url, context.loc('url_copied'));
           break;
         case 'markdown':
           final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
-          _copyToClipboard(markdown, 'Markdown copied to clipboard');
+          _copyToClipboard(markdown, context.loc('markdown_copied'));
           break;
       }
     });
@@ -2111,16 +2119,16 @@ class _PreviewContentState extends State<_PreviewContent> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded: ${_basenameFromKey(widget.object.key)}'),
-            action: SnackBarAction(label: 'OK', onPressed: () {}),
+            content: Text(context.loc('downloaded_item', [_basenameFromKey(widget.object.key)])),
+            action: SnackBarAction(label: context.loc('ok'), onPressed: () {}),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.loc('download_failed', [e.toString()])), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) {
@@ -2231,10 +2239,10 @@ class _PreviewContentState extends State<_PreviewContent> {
             children: [
               Icon(Icons.insert_drive_file, size: 64, color: iconColor),
               const SizedBox(height: 16),
-              Text('File Preview', style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+              Text(context.loc('file_preview_title'), style: TextStyle(color: textColor.withValues(alpha: 0.7))),
               const SizedBox(height: 8),
               Text(
-                'Preview not available for this file type',
+                context.loc('preview_not_available'),
                 style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: AppFontSizes.sm),
               ),
             ],
@@ -2265,7 +2273,7 @@ class _PreviewContentState extends State<_PreviewContent> {
                   children: [
                     Icon(Icons.broken_image, size: 64, color: iconColor),
                     const SizedBox(height: 16),
-                    Text('Failed to load image', style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+                    Text(context.loc('image_load_failed'), style: TextStyle(color: textColor.withValues(alpha: 0.7))),
                   ],
                 ),
               );
@@ -2283,10 +2291,10 @@ class _PreviewContentState extends State<_PreviewContent> {
           children: [
             Icon(Icons.image, size: 64, color: iconColor),
             const SizedBox(height: 16),
-            Text('Image Preview', style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+            Text(context.loc('image_preview_title'), style: TextStyle(color: textColor.withValues(alpha: 0.7))),
             const SizedBox(height: 8),
             Text(
-              'Failed to load image preview',
+              context.loc('image_preview_failed'),
               style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: AppFontSizes.sm),
             ),
           ],
@@ -2307,25 +2315,28 @@ class _PreviewContentState extends State<_PreviewContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'File Information',
+              context.loc('file_information'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Name', widget.object.key),
+            _buildDetailRow(context.loc('file_info_name'), widget.object.key),
             if (widget.object.size != null) ...[
               const SizedBox(height: 8),
-              _buildDetailRow('Size', _formatBytes(widget.object.size!, 2)),
+              _buildDetailRow(context.loc('file_info_size'), _formatBytes(widget.object.size!, 2)),
             ],
             if (widget.object.lastModified != null) ...[
               const SizedBox(height: 8),
-              _buildDetailRow('Modified', dateFormat.format(widget.object.lastModified!)),
+              _buildDetailRow(context.loc('file_info_modified'), dateFormat.format(widget.object.lastModified!)),
             ],
             if (widget.object.eTag != null) ...[
               const SizedBox(height: 8),
-              _buildDetailRow('ETag', widget.object.eTag!),
+              _buildDetailRow(context.loc('file_info_etag'), widget.object.eTag!),
             ],
             const SizedBox(height: 8),
-            _buildDetailRow('Type', widget.isImage ? 'Image' : 'File'),
+            _buildDetailRow(
+              context.loc('file_info_type'),
+              widget.isImage ? context.loc('file_type_image') : context.loc('file_type_file'),
+            ),
           ],
         ),
       ),

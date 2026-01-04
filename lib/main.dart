@@ -37,7 +37,7 @@ void main() {
       appWindow.minSize = const Size(800, 600);
       appWindow.size = initialSize;
       appWindow.alignment = Alignment.center;
-      appWindow.title = "S3 Manager";
+      appWindow.title = LanguageManager.instance.getLocalized('s3_manager');
       appWindow.show();
     });
   }
@@ -50,10 +50,10 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: ThemeManager.instance,
+      animation: Listenable.merge([ThemeManager.instance, LanguageManager.instance]),
       builder: (context, child) {
         return MaterialApp(
-          title: 'Ploy S3',
+          title: LanguageManager.instance.getLocalized('app_name_s3'),
           theme: ThemeManager.instance.currentTheme,
           debugShowCheckedModeBanner: false,
           home: const LanguageProvider(child: ThemeProvider(child: AppShell())),

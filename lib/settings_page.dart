@@ -101,25 +101,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   scrolledUnderElevation: 0,
                 ),
                 backgroundColor: Colors.transparent,
-                body: isMobilePlatform
-                    ? SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 600),
-                            child: _buildSettingsContent(context, isMobile: true),
-                          ),
-                        ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 600),
-                            child: _buildSettingsContent(context, isMobile: false),
-                          ),
-                        ),
-                      ),
+                body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: _buildSettingsContent(context, isMobile: isMobilePlatform),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

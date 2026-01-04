@@ -15,6 +15,7 @@ import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
+import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +84,7 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _loadConfigs();
+    McpSettingsManager.instance.initialize();
   }
 
   Future<void> _loadConfigs() async {

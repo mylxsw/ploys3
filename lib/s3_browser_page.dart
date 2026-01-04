@@ -880,7 +880,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSelectionMode ? Text('${_selectedItems.length} selected') : Text(widget.serverConfig.name),
+        title: _isSelectionMode
+            ? Text('${_selectedItems.length} selected')
+            : (Platform.isMobile ? Text(widget.serverConfig.name) : _buildBreadcrumbBar(inAppBar: true)),
         backgroundColor: Colors.transparent,
         leading: _buildHeaderLeading(context),
         leadingWidth: _headerLeadingWidth,
@@ -921,106 +923,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           children: [
             Column(
               children: [
-                // Breadcrumb navigation
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    children: [
-                      // Home button to return to root
-                      IconButton(
-                        onPressed: () {
-                          // Clear prefix history and go to root
-                          setState(() {
-                            _prefixHistory.clear();
-                            _currentPrefix = '';
-                            _objects = [];
-                            _isLoading = true;
-                          });
-                          _listObjects(prefix: '');
-                        },
-                        icon: const Icon(Icons.home),
-                        tooltip: 'Home',
-                      ),
-                      if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
-                        const SizedBox(width: 8),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              // Split prefix into parts and create clickable breadcrumbs
-                              ..._currentPrefix
-                                  .split('/')
-                                  .where((part) => part.isNotEmpty)
-                                  .toList()
-                                  .asMap()
-                                  .entries
-                                  .map((entry) {
-                                    final index = entry.key;
-                                    final part = entry.value;
-                                    final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
-                                    final isLast = index == parts.length - 1;
-
-                                    // Reconstruct path for this segment
-                                    final pathParts = parts.sublist(0, index + 1);
-                                    final path = '${pathParts.join('/')}/';
-
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (index > 0)
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                                            child: Icon(
-                                              Icons.chevron_right,
-                                              size: 16,
-                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                            ),
-                                          ),
-                                        InkWell(
-                                          onTap: isLast ? null : () => _navigateToDirectory(path),
-                                          borderRadius: BorderRadius.circular(4),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                            child: Text(
-                                              part,
-                                              style: isLast
-                                                  ? Theme.of(
-                                                      context,
-                                                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)
-                                                  : Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                      color: Theme.of(context).colorScheme.primary,
-                                                      decoration: TextDecoration.underline,
-                                                    ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Back button (up to parent)
-                      if (_currentPrefix.isNotEmpty)
-                        IconButton(
-                          onPressed: () {
-                            // Navigate to parent directory
-                            final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
-                            if (parts.isNotEmpty) {
-                              parts.removeLast();
-                              final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
-                              _navigateToDirectory(parentPath);
-                            }
-                          },
-                          icon: const Icon(Icons.arrow_upward),
-                          tooltip: 'Up to parent',
-                          style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
-                        ),
-                    ],
-                  ),
-                ),
+                if (Platform.isMobile) _buildBreadcrumbBar(inAppBar: false),
 
                 // Objects list/grid
                 Expanded(
@@ -1184,93 +1087,156 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       ];
     }
 
-    return [
-      PopupMenuButton<String>(
-        enabled: !_isUploading,
-        borderRadius: BorderRadius.circular(8),
-        tooltip: 'Add',
-        position: PopupMenuPosition.under,
-        child: SizedBox(
-          height: kMinInteractiveDimension,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, color: Theme.of(context).iconTheme.color),
-                  const SizedBox(width: 2),
-                  Icon(Icons.arrow_drop_down, color: Theme.of(context).iconTheme.color, size: 20),
-                ],
-              ),
+    final addButton = PopupMenuButton<String>(
+      enabled: !_isUploading,
+      borderRadius: BorderRadius.circular(8),
+      tooltip: 'Add',
+      position: PopupMenuPosition.under,
+      child: SizedBox(
+        height: kMinInteractiveDimension,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, color: Theme.of(context).iconTheme.color),
+                const SizedBox(width: 2),
+                Icon(Icons.arrow_drop_down, color: Theme.of(context).iconTheme.color, size: 20),
+              ],
             ),
           ),
         ),
-        onSelected: (value) {
-          if (_isUploading) return;
-          if (value == 'folder') {
-            _createFolder();
-          } else if (value == 'upload') {
-            _uploadFile();
-          }
-        },
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: 'folder',
-            child: Row(
-              children: [
-                const Icon(Icons.create_new_folder_outlined, size: 18),
-                const SizedBox(width: 8),
-                const Text('Create folder'),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: 'upload',
-            child: Row(
-              children: [
-                const Icon(Icons.cloud_upload_outlined, size: 18),
-                const SizedBox(width: 8),
-                const Text('Upload file'),
-              ],
-            ),
-          ),
-        ],
       ),
-      // Refresh button
-      IconButton(
-        icon: const Icon(Icons.loop),
-        onPressed: _isLoading || _isRefreshing
-            ? null
-            : () {
-                _clearCache();
-                _listObjects(prefix: _currentPrefix);
-              },
-        tooltip: 'Refresh',
+      onSelected: (value) {
+        if (_isUploading) return;
+        if (value == 'folder') {
+          _createFolder();
+        } else if (value == 'upload') {
+          _uploadFile();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'folder',
+          child: Row(
+            children: [
+              const Icon(Icons.create_new_folder_outlined, size: 18),
+              const SizedBox(width: 8),
+              const Text('Create folder'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'upload',
+          child: Row(
+            children: [
+              const Icon(Icons.cloud_upload_outlined, size: 18),
+              const SizedBox(width: 8),
+              const Text('Upload file'),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (Platform.isMobile) {
+      return [
+        addButton,
+        // Refresh button
+        IconButton(
+          icon: const Icon(Icons.loop),
+          onPressed: _isLoading || _isRefreshing
+              ? null
+              : () {
+                  _clearCache();
+                  _listObjects(prefix: _currentPrefix);
+                },
+          tooltip: 'Refresh',
+        ),
+        // Selection mode toggle
+        IconButton(
+          icon: const Icon(Icons.checklist),
+          onPressed: () {
+            setState(() {
+              _isSelectionMode = true;
+            });
+          },
+          tooltip: 'Select files',
+        ),
+        // View toggle button
+        IconButton(
+          icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
+          onPressed: () {
+            setState(() {
+              _isGridView = !_isGridView;
+            });
+          },
+          tooltip: _isGridView ? 'List view' : 'Grid view',
+        ),
+        // Search button
+        IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: 'Search'),
+      ];
+    }
+
+    final moreActions = PopupMenuButton<String>(
+      borderRadius: BorderRadius.circular(8),
+      tooltip: 'Actions',
+      position: PopupMenuPosition.under,
+      child: SizedBox(
+        height: kMinInteractiveDimension,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(Icons.more_vert, color: Theme.of(context).iconTheme.color),
+          ),
+        ),
       ),
-      // Selection mode toggle
-      IconButton(
-        icon: const Icon(Icons.checklist),
-        onPressed: () {
+      onSelected: (value) {
+        if (value == 'refresh') {
+          if (_isLoading || _isRefreshing) return;
+          _clearCache();
+          _listObjects(prefix: _currentPrefix);
+        } else if (value == 'select') {
           setState(() {
             _isSelectionMode = true;
           });
-        },
-        tooltip: 'Select files',
-      ),
-      // View toggle button
-      IconButton(
-        icon: Icon(_isGridView ? Icons.list : Icons.grid_view),
-        onPressed: () {
+        } else if (value == 'view') {
           setState(() {
             _isGridView = !_isGridView;
           });
-        },
-        tooltip: _isGridView ? 'List view' : 'Grid view',
-      ),
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'refresh',
+          enabled: !(_isLoading || _isRefreshing),
+          child: Row(children: [const Icon(Icons.loop, size: 18), const SizedBox(width: 8), const Text('Refresh')]),
+        ),
+        PopupMenuItem(
+          value: 'select',
+          child: Row(
+            children: [const Icon(Icons.checklist, size: 18), const SizedBox(width: 8), const Text('Select files')],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'view',
+          child: Row(
+            children: [
+              Icon(_isGridView ? Icons.list : Icons.grid_view, size: 18),
+              const SizedBox(width: 8),
+              Text(_isGridView ? 'List view' : 'Grid view'),
+            ],
+          ),
+        ),
+      ],
+    );
 
+    return [
+      addButton,
       // Search button
       IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: 'Search'),
+      moreActions,
     ];
   }
 
@@ -1590,8 +1556,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   void _showSearchResults(String query) {
     final lowerQuery = query.toLowerCase();
-    final results =
-        _objects.where((item) => _basenameFromKey(item.key).toLowerCase().contains(lowerQuery)).toList();
+    final results = _objects.where((item) => _basenameFromKey(item.key).toLowerCase().contains(lowerQuery)).toList();
     final childAspectRatio = Platform.isMobile ? 0.82 : 1.0;
 
     showDialog<void>(
@@ -1691,6 +1656,102 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBreadcrumbBar({required bool inAppBar}) {
+    final padding = inAppBar ? const EdgeInsets.symmetric(horizontal: 4) : const EdgeInsets.all(8);
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        children: [
+          // Home button to return to root
+          IconButton(
+            onPressed: () {
+              // Clear prefix history and go to root
+              setState(() {
+                _prefixHistory.clear();
+                _currentPrefix = '';
+                _objects = [];
+                _isLoading = true;
+              });
+              _listObjects(prefix: '');
+            },
+            icon: const Icon(Icons.home),
+            tooltip: 'Home',
+          ),
+          if ((_prefixHistory.isNotEmpty || _currentPrefix.isNotEmpty) && _currentPrefix.isNotEmpty)
+            const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // Split prefix into parts and create clickable breadcrumbs
+                  ..._currentPrefix.split('/').where((part) => part.isNotEmpty).toList().asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final part = entry.value;
+                    final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
+                    final isLast = index == parts.length - 1;
+
+                    // Reconstruct path for this segment
+                    final pathParts = parts.sublist(0, index + 1);
+                    final path = '${pathParts.join('/')}/';
+
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (index > 0)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              Icons.chevron_right,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        InkWell(
+                          onTap: isLast ? null : () => _navigateToDirectory(path),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Text(
+                              part,
+                              style: isLast
+                                  ? Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)
+                                  : Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          // Back button (up to parent)
+          if (_currentPrefix.isNotEmpty)
+            IconButton(
+              onPressed: () {
+                // Navigate to parent directory
+                final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
+                if (parts.isNotEmpty) {
+                  parts.removeLast();
+                  final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
+                  _navigateToDirectory(parentPath);
+                }
+              },
+              icon: const Icon(Icons.arrow_upward),
+              tooltip: 'Up to parent',
+              style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
+            ),
+        ],
+      ),
     );
   }
 

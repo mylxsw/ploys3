@@ -586,22 +586,19 @@ class _AppShellState extends State<AppShell> {
                             ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
+                                  Icon(Icons.settings_outlined, size: 20),
                                   const SizedBox(width: 12),
                                   Flexible(
                                     child: Text(
                                       context.loc('settings'),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                      style: TextStyle(fontWeight: FontWeight.w500),
                                     ),
                                   ),
                                 ],
                               )
-                            : Icon(Icons.settings_outlined, color: Theme.of(context).colorScheme.primary, size: 24),
+                            : Icon(Icons.settings_outlined, size: 24),
                       ),
                     ),
                   ),

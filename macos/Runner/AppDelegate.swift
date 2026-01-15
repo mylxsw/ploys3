@@ -11,6 +11,33 @@ enum MenuBarIconState: String {
   case uploading = "uploading"     // 上传中状态（Flutter 端控制）
 }
 
+// MARK: - Drop Zone File Filter Configuration
+// 拖拽上传支持的文件类型配置 - 修改这里可以自定义支持的文件扩展名
+struct DropZoneFileFilter {
+  // 支持的文件扩展名列表（小写，不带点）
+  // 设置为空数组 [] 表示支持所有文件类型
+  static let allowedExtensions: Set<String> = [
+    // 图片格式
+    "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tiff", "tif", "ico", "heic", "heif",
+    // 其它格式
+    "pdf", "doc", "docx", "txt", "mp4", "mov"
+  ]
+  
+  // 检查文件是否符合过滤条件
+  static func isFileAllowed(_ filePath: String) -> Bool {
+    // 如果允许的扩展名为空，则支持所有文件
+    if allowedExtensions.isEmpty { return true }
+    
+    let ext = (filePath as NSString).pathExtension.lowercased()
+    return allowedExtensions.contains(ext)
+  }
+  
+  // 检查文件列表中是否有符合条件的文件
+  static func hasAllowedFiles(_ filePaths: [String]) -> Bool {
+    return filePaths.contains { isFileAllowed($0) }
+  }
+}
+
 // MARK: - Menu Bar Icon Configuration
 // 菜单栏图标配置 - 修改这里可以一键更换图标
 struct MenuBarIconConfig {
@@ -48,15 +75,15 @@ struct MenuBarIconConfig {
   }
 }
 
-// MARK: - Bear Drop Zone Window
-// 小熊形状的文件上传窗口
-class BearDropZoneWindow: NSWindow {
+// MARK: - Drop Zone Window
+// 文件上传拖放窗口
+class DropZoneWindow: NSWindow {
   weak var appDelegate: AppDelegate?
   
   init() {
-    // 创建一个无边框、透明背景的窗口
+    // 创建一个紧凑的圆角矩形窗口
     super.init(
-      contentRect: NSRect(x: 0, y: 0, width: 200, height: 220),
+      contentRect: NSRect(x: 0, y: 0, width: 160, height: 100),
       styleMask: [.borderless],
       backing: .buffered,
       defer: false
@@ -70,7 +97,7 @@ class BearDropZoneWindow: NSWindow {
     self.ignoresMouseEvents = false
     
     // 设置内容视图
-    let dropView = BearDropZoneView(frame: NSRect(x: 0, y: 0, width: 200, height: 220))
+    let dropView = DropZoneView(frame: NSRect(x: 0, y: 0, width: 160, height: 100))
     dropView.dropWindow = self
     self.contentView = dropView
   }
@@ -92,9 +119,9 @@ class BearDropZoneWindow: NSWindow {
   }
 }
 
-// 小熊形状的拖放区域视图
-class BearDropZoneView: NSView {
-  weak var dropWindow: BearDropZoneWindow?
+// 拖放区域视图
+class DropZoneView: NSView {
+  weak var dropWindow: DropZoneWindow?
   private var isHovering = false
   
   override init(frame frameRect: NSRect) {
@@ -109,176 +136,107 @@ class BearDropZoneView: NSView {
   
   override func draw(_ dirtyRect: NSRect) {
     super.draw(dirtyRect)
-    
-    let bounds = self.bounds
-    
-    // 绘制小熊形状
-    drawBearShape(in: bounds)
+    drawDropZone(in: self.bounds)
   }
   
-  private func drawBearShape(in bounds: NSRect) {
+  // 检测当前是否为深色模式
+  private var isDarkMode: Bool {
+    if #available(macOS 10.14, *) {
+      return NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
+    return false
+  }
+  
+  private func drawDropZone(in bounds: NSRect) {
+    let cornerRadius: CGFloat = 12
+    let padding: CGFloat = 2
+    let darkMode = isDarkMode
+    
+    // 外层背景
+    let outerRect = bounds.insetBy(dx: padding, dy: padding)
+    let outerPath = NSBezierPath(roundedRect: outerRect, xRadius: cornerRadius, yRadius: cornerRadius)
+    
+    // 根据主题和状态设置颜色
+    let bgColor: NSColor
+    let borderColor: NSColor
+    let dashColor: NSColor
+    let contentColor: NSColor
+    
+    if isHovering {
+      bgColor = NSColor.systemBlue.withAlphaComponent(0.95)
+      borderColor = NSColor.white.withAlphaComponent(0.5)
+      dashColor = NSColor.white.withAlphaComponent(0.8)
+      contentColor = NSColor.white
+    } else if darkMode {
+      bgColor = NSColor(white: 0.15, alpha: 0.95)
+      borderColor = NSColor.white.withAlphaComponent(0.2)
+      dashColor = NSColor.white.withAlphaComponent(0.4)
+      contentColor = NSColor.white
+    } else {
+      bgColor = NSColor(white: 0.98, alpha: 0.95)
+      borderColor = NSColor.black.withAlphaComponent(0.15)
+      dashColor = NSColor.black.withAlphaComponent(0.3)
+      contentColor = NSColor.black.withAlphaComponent(0.8)
+    }
+    
+    bgColor.setFill()
+    outerPath.fill()
+    
+    // 边框
+    borderColor.setStroke()
+    outerPath.lineWidth = 1.5
+    outerPath.stroke()
+    
+    // 虚线边框区域
+    let innerRect = outerRect.insetBy(dx: 10, dy: 10)
+    let innerPath = NSBezierPath(roundedRect: innerRect, xRadius: 8, yRadius: 8)
+    
+    dashColor.setStroke()
+    innerPath.lineWidth = 2
+    innerPath.setLineDash([6, 4], count: 2, phase: 0)
+    innerPath.stroke()
+    
     let centerX = bounds.midX
-    let baseColor = isHovering ? NSColor.systemBlue : NSColor.systemGray
+    let centerY = bounds.midY
     
-    // 小熊头部（主体圆形）
-    let headRadius: CGFloat = 70
-    let headCenter = NSPoint(x: centerX, y: bounds.height - 90)
-    let headRect = NSRect(
-      x: headCenter.x - headRadius,
-      y: headCenter.y - headRadius,
-      width: headRadius * 2,
-      height: headRadius * 2
-    )
+    // 上传图标
+    if #available(macOS 11.0, *) {
+      let symbolName = isHovering ? "arrow.up.circle.fill" : "icloud.and.arrow.up"
+      if let icon = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
+        let config = NSImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+        if let configuredIcon = icon.withSymbolConfiguration(config) {
+          let iconSize: CGFloat = 32
+          let iconRect = NSRect(
+            x: centerX - iconSize / 2,
+            y: centerY + 5,
+            width: iconSize,
+            height: iconSize
+          )
+          // 将图标着色为对应颜色
+          let tintedIcon = configuredIcon.copy() as! NSImage
+          tintedIcon.lockFocus()
+          contentColor.set()
+          NSRect(origin: .zero, size: tintedIcon.size).fill(using: .sourceAtop)
+          tintedIcon.unlockFocus()
+          tintedIcon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        }
+      }
+    }
     
-    // 绘制耳朵
-    let earRadius: CGFloat = 25
-    let leftEarCenter = NSPoint(x: centerX - 50, y: bounds.height - 30)
-    let rightEarCenter = NSPoint(x: centerX + 50, y: bounds.height - 30)
-    
-    // 左耳
-    let leftEarPath = NSBezierPath(ovalIn: NSRect(
-      x: leftEarCenter.x - earRadius,
-      y: leftEarCenter.y - earRadius,
-      width: earRadius * 2,
-      height: earRadius * 2
-    ))
-    baseColor.withAlphaComponent(0.9).setFill()
-    leftEarPath.fill()
-    
-    // 右耳
-    let rightEarPath = NSBezierPath(ovalIn: NSRect(
-      x: rightEarCenter.x - earRadius,
-      y: rightEarCenter.y - earRadius,
-      width: earRadius * 2,
-      height: earRadius * 2
-    ))
-    rightEarPath.fill()
-    
-    // 头部主体
-    let headPath = NSBezierPath(ovalIn: headRect)
-    baseColor.withAlphaComponent(0.95).setFill()
-    headPath.fill()
-    
-    // 内耳
-    let innerEarRadius: CGFloat = 15
-    NSColor.white.withAlphaComponent(0.3).setFill()
-    NSBezierPath(ovalIn: NSRect(
-      x: leftEarCenter.x - innerEarRadius,
-      y: leftEarCenter.y - innerEarRadius,
-      width: innerEarRadius * 2,
-      height: innerEarRadius * 2
-    )).fill()
-    NSBezierPath(ovalIn: NSRect(
-      x: rightEarCenter.x - innerEarRadius,
-      y: rightEarCenter.y - innerEarRadius,
-      width: innerEarRadius * 2,
-      height: innerEarRadius * 2
-    )).fill()
-    
-    // 眼睛
-    let eyeRadius: CGFloat = 8
-    let eyeY = headCenter.y + 15
-    NSColor.white.setFill()
-    NSBezierPath(ovalIn: NSRect(
-      x: centerX - 25 - eyeRadius,
-      y: eyeY - eyeRadius,
-      width: eyeRadius * 2,
-      height: eyeRadius * 2
-    )).fill()
-    NSBezierPath(ovalIn: NSRect(
-      x: centerX + 25 - eyeRadius,
-      y: eyeY - eyeRadius,
-      width: eyeRadius * 2,
-      height: eyeRadius * 2
-    )).fill()
-    
-    // 眼珠
-    let pupilRadius: CGFloat = 4
-    NSColor.black.setFill()
-    NSBezierPath(ovalIn: NSRect(
-      x: centerX - 25 - pupilRadius,
-      y: eyeY - pupilRadius,
-      width: pupilRadius * 2,
-      height: pupilRadius * 2
-    )).fill()
-    NSBezierPath(ovalIn: NSRect(
-      x: centerX + 25 - pupilRadius,
-      y: eyeY - pupilRadius,
-      width: pupilRadius * 2,
-      height: pupilRadius * 2
-    )).fill()
-    
-    // 鼻子区域（椭圆形）
-    let snoutWidth: CGFloat = 40
-    let snoutHeight: CGFloat = 30
-    let snoutY = headCenter.y - 20
-    NSColor.white.withAlphaComponent(0.5).setFill()
-    NSBezierPath(ovalIn: NSRect(
-      x: centerX - snoutWidth / 2,
-      y: snoutY - snoutHeight / 2,
-      width: snoutWidth,
-      height: snoutHeight
-    )).fill()
-    
-    // 鼻子
-    let noseWidth: CGFloat = 12
-    let noseHeight: CGFloat = 8
-    NSColor.black.setFill()
-    let nosePath = NSBezierPath(ovalIn: NSRect(
-      x: centerX - noseWidth / 2,
-      y: snoutY + 2,
-      width: noseWidth,
-      height: noseHeight
-    ))
-    nosePath.fill()
-    
-    // 嘴巴（微笑）
-    let smilePath = NSBezierPath()
-    smilePath.move(to: NSPoint(x: centerX, y: snoutY - 2))
-    smilePath.curve(
-      to: NSPoint(x: centerX + 15, y: snoutY - 8),
-      controlPoint1: NSPoint(x: centerX + 5, y: snoutY - 8),
-      controlPoint2: NSPoint(x: centerX + 10, y: snoutY - 10)
-    )
-    smilePath.move(to: NSPoint(x: centerX, y: snoutY - 2))
-    smilePath.curve(
-      to: NSPoint(x: centerX - 15, y: snoutY - 8),
-      controlPoint1: NSPoint(x: centerX - 5, y: snoutY - 8),
-      controlPoint2: NSPoint(x: centerX - 10, y: snoutY - 10)
-    )
-    NSColor.black.setStroke()
-    smilePath.lineWidth = 2
-    smilePath.stroke()
-    
-    // 绘制提示文字
-    let text = isHovering ? "松开即可上传" : "拖拽文件即可上传"
+    // 提示文字
+    let text = isHovering ? "松开上传" : "拖放到此处"
     let textAttributes: [NSAttributedString.Key: Any] = [
-      .font: NSFont.systemFont(ofSize: 13, weight: .medium),
-      .foregroundColor: NSColor.white
+      .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+      .foregroundColor: contentColor.withAlphaComponent(0.9)
     ]
     let textSize = (text as NSString).size(withAttributes: textAttributes)
     let textRect = NSRect(
       x: centerX - textSize.width / 2,
-      y: 15,
+      y: centerY - 25,
       width: textSize.width,
       height: textSize.height
     )
     (text as NSString).draw(in: textRect, withAttributes: textAttributes)
-    
-    // 绘制上传图标（在小熊肚子位置）
-    if #available(macOS 11.0, *) {
-      if let uploadIcon = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: nil) {
-        let iconSize: CGFloat = 30
-        let iconRect = NSRect(
-          x: centerX - iconSize / 2,
-          y: 45,
-          width: iconSize,
-          height: iconSize
-        )
-        NSColor.white.set()
-        uploadIcon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1.0)
-      }
-    }
   }
   
   override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -374,7 +332,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   private var globalMouseUpMonitor: Any?
   private var currentIconState: MenuBarIconState = .normal
   private var isFlutterControlled: Bool = false  // Flutter 是否正在控制图标状态
-  private var dropZoneWindow: BearDropZoneWindow?
+  private var dropZoneWindow: DropZoneWindow?
 
   private func log(_ message: String) {
     NSLog("[S3Manager] \(message)")
@@ -403,6 +361,9 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     }
   }
   
+  private var lastDragLogTime: Date = Date.distantPast
+  private var lastPasteboardChangeCount: Int = 0
+  
   private func checkForFileDrag() {
     // 如果 Flutter 正在控制图标状态，不要干扰
     if isFlutterControlled { return }
@@ -413,32 +374,50 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     
     // 检查拖拽剪贴板是否有文件
     let dragPasteboard = NSPasteboard(name: .drag)
-    
-    // 方法1: 检查是否可以读取文件 URL
-    let hasFileURLs = dragPasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
-    
-    // 方法2: 检查剪贴板类型是否包含文件相关类型
     let types = dragPasteboard.types ?? []
-    let hasFileTypes = types.contains(.fileURL) || 
-                       types.contains(NSPasteboard.PasteboardType("public.file-url")) ||
-                       types.contains(NSPasteboard.PasteboardType("NSFilenamesPboardType"))
     
-    // 方法3: 检查通用剪贴板（有时 Finder 会使用这个）
-    let generalPasteboard = NSPasteboard.general
-    let generalTypes = generalPasteboard.types ?? []
-    let hasGeneralFileTypes = generalTypes.contains(.fileURL) ||
-                              generalTypes.contains(NSPasteboard.PasteboardType("public.file-url"))
+    // 如果剪贴板为空，直接返回
+    if types.isEmpty { return }
     
-    let hasFiles = hasFileURLs || hasFileTypes || hasGeneralFileTypes
+    // 检查剪贴板是否有新的变化（避免使用旧的剪贴板数据）
+    let currentChangeCount = dragPasteboard.changeCount
     
-    // 调试日志
-    if mouseDown && (types.count > 0 || generalTypes.count > 0) {
-      log("checkForFileDrag: mouseDown=\(mouseDown), hasFileURLs=\(hasFileURLs), hasFileTypes=\(hasFileTypes), hasGeneralFileTypes=\(hasGeneralFileTypes)")
-      log("  dragTypes: \(types.map { $0.rawValue })")
+    // 检查当前活动的应用是否是 Finder
+    let frontApp = NSWorkspace.shared.frontmostApplication
+    let isFinderActive = frontApp?.bundleIdentifier == "com.apple.finder"
+    
+    // 调试日志（每秒最多输出一次）
+    let now = Date()
+    if now.timeIntervalSince(lastDragLogTime) > 1.0 {
+      lastDragLogTime = now
+      log("checkForFileDrag: isFinderActive=\(isFinderActive), changeCount=\(currentChangeCount), lastChangeCount=\(lastPasteboardChangeCount)")
     }
     
-    if hasFiles && currentIconState == .normal {
-      log("Detected file drag, showing drop zone")
+    // 只有当 Finder 是当前活动应用时才检测
+    if !isFinderActive { return }
+    
+    // 检查是否有文件 URL
+    let hasFileURLs = types.contains(.fileURL) || 
+                      types.contains(NSPasteboard.PasteboardType("public.file-url")) ||
+                      types.contains(NSPasteboard.PasteboardType("NSFilenamesPboardType"))
+    
+    // 检查是否来自 Finder
+    let isFromFinder = types.contains(NSPasteboard.PasteboardType("com.apple.finder.node"))
+    
+    // 检查拖拽的文件是否符合过滤条件（扩展名）
+    var hasAllowedFiles = false
+    if hasFileURLs {
+      if let urls = dragPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] {
+        let filePaths = urls.map { $0.path }
+        hasAllowedFiles = DropZoneFileFilter.hasAllowedFiles(filePaths)
+      }
+    }
+    
+    let shouldShowDropZone = isFromFinder && hasFileURLs && hasAllowedFiles
+    
+    if shouldShowDropZone && currentIconState == .normal {
+      lastPasteboardChangeCount = currentChangeCount
+      log("Detected Finder file drag, showing drop zone")
       setIconState(.ready)
       showDropZoneWindow()
     }
@@ -644,7 +623,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   
   func showDropZoneWindow() {
     if dropZoneWindow == nil {
-      dropZoneWindow = BearDropZoneWindow()
+      dropZoneWindow = DropZoneWindow()
       dropZoneWindow?.appDelegate = self
     }
     

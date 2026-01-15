@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';

@@ -4,7 +4,7 @@ import bitsdojo_window_macos
 
 class MainFlutterWindow: BitsdojoWindow {
   override func bitsdojo_window_configure() -> UInt {
-    return BDW_CUSTOM_FRAME | BDW_HIDE_ON_STARTUP
+    return BDW_CUSTOM_FRAME
   }
 
   override func awakeFromNib() {
@@ -14,6 +14,10 @@ class MainFlutterWindow: BitsdojoWindow {
     self.setFrame(windowFrame, display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
+
+    if let appDelegate = NSApp.delegate as? AppDelegate {
+      appDelegate.bindMainWindow(self)
+    }
 
     super.awakeFromNib()
   }

@@ -10,6 +10,10 @@ class Platform {
     return const [TargetPlatform.windows, TargetPlatform.macOS, TargetPlatform.linux].contains(defaultTargetPlatform);
   }
 
+  static bool get isMacOS {
+    return defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
   /// Checks if the current platform is a web platform.
   static bool get isWeb {
     return kIsWeb;

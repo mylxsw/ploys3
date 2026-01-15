@@ -15,9 +15,98 @@ import 'package:ploys3/core/localization.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
+import 'package:flutter/foundation.dart';
+
+/// Method channel for macOS menu bar communication
+const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
+
+/// 菜单栏图标状态枚举
+enum MenuBarIconState {
+  normal,     // 默认状态
+  ready,      // 准备上传状态（用户正在拖拽文件）
+  hover,      // 悬停状态（文件拖到图标上方）
+  uploading,  // 上传中状态
+}
+
+/// 菜单栏图标控制器 - 用于从 Flutter 端控制菜单栏图标状态
+class MenuBarIconController {
+  static const MethodChannel _channel = _menuBarChannel;
+  
+  /// 设置菜单栏图标状态
+  /// 
+  /// 当设置为非 normal 状态时，原生端的自动拖拽检测会被暂停，
+  /// 直到状态被设置回 normal。
+  static Future<void> setIconState(MenuBarIconState state) async {
+    if (!Platform.isMacOS) return;
+    
+    try {
+      await _channel.invokeMethod('setIconState', state.name);
+    } catch (e) {
+      debugPrint('Failed to set menu bar icon state: $e');
+    }
+  }
+  
+  /// 获取当前菜单栏图标状态
+  static Future<MenuBarIconState> getIconState() async {
+    if (!Platform.isMacOS) return MenuBarIconState.normal;
+    
+    try {
+      final String? stateString = await _channel.invokeMethod('getIconState');
+      return MenuBarIconState.values.firstWhere(
+        (s) => s.name == stateString,
+        orElse: () => MenuBarIconState.normal,
+      );
+    } catch (e) {
+      debugPrint('Failed to get menu bar icon state: $e');
+      return MenuBarIconState.normal;
+    }
+  }
+  
+  /// 设置为上传中状态
+  static Future<void> setUploading() => setIconState(MenuBarIconState.uploading);
+  
+  /// 重置为默认状态
+  static Future<void> resetToNormal() => setIconState(MenuBarIconState.normal);
+}
+
+/// Placeholder function for handling files dropped on menu bar icon.
+/// This will be called when user drags files to the menu bar icon.
+/// 
+/// [filePaths] - List of absolute file paths that were dropped
+/// 
+/// TODO: Implement the actual upload logic
+Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
+  // TODO: Implement upload logic here
+  // Example: You might want to:
+  // 1. Show a dialog to select target server/bucket
+  // 2. Start uploading files to S3
+  // 3. Show upload progress
+  // 4. Use MenuBarIconController.setUploading() to show uploading state
+  // 5. Use MenuBarIconController.resetToNormal() when done
+  debugPrint('Files dropped on menu bar: $filePaths');
+}
+
+void _setupMenuBarChannel() {
+  _menuBarChannel.setMethodCallHandler((call) async {
+    switch (call.method) {
+      case 'onFilesDropped':
+        final List<String> filePaths = (call.arguments as List).cast<String>();
+        await onMenuBarFilesDropped(filePaths);
+        break;
+      default:
+        throw PlatformException(
+          code: 'Unimplemented',
+          details: 'Method ${call.method} not implemented',
+        );
+    }
+  });
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Setup menu bar channel for macOS
+  _setupMenuBarChannel();
 
   // 设置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(

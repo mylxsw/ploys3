@@ -15,9 +15,16 @@ import 'package:ploys3/core/localization.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
+import 'package:ploys3/core/menubar_settings_manager.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
+
+/// 全局导航 key，用于从菜单栏打开设置页面
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// 打开设置页面的回调函数
+VoidCallback? onOpenSettingsCallback;
 
 /// 菜单栏图标状态枚举
 enum MenuBarIconState {
@@ -66,6 +73,71 @@ class MenuBarIconController {
   
   /// 重置为默认状态
   static Future<void> resetToNormal() => setIconState(MenuBarIconState.normal);
+  
+  /// 设置菜单栏功能是否启用
+  /// 
+  /// 当设置为 false 时，菜单栏图标和拖拽上传窗口都会被隐藏。
+  /// 当设置为 true 时，菜单栏图标和拖拽上传功能会被恢复。
+  /// 
+  /// [enabled] - true 启用菜单栏功能，false 禁用菜单栏功能
+  static Future<void> setMenuBarEnabled(bool enabled) async {
+    if (!Platform.isMacOS) return;
+    
+    try {
+      await _channel.invokeMethod('setMenuBarEnabled', enabled);
+    } catch (e) {
+      debugPrint('Failed to set menu bar enabled: $e');
+    }
+  }
+  
+  /// 获取菜单栏功能是否启用
+  static Future<bool> isMenuBarEnabled() async {
+    if (!Platform.isMacOS) return false;
+    
+    try {
+      final bool? enabled = await _channel.invokeMethod('getMenuBarEnabled');
+      return enabled ?? true;
+    } catch (e) {
+      debugPrint('Failed to get menu bar enabled: $e');
+      return true;
+    }
+  }
+  
+  /// 显示菜单栏图标
+  static Future<void> show() => setMenuBarEnabled(true);
+  
+  /// 隐藏菜单栏图标
+  static Future<void> hide() => setMenuBarEnabled(false);
+  
+  /// 设置快捷上传功能是否启用
+  /// 
+  /// 当设置为 false 时，拖拽文件时不会显示上传窗口。
+  /// 当设置为 true 时，拖拽文件时会显示上传窗口。
+  /// 注意：只有在菜单栏图标启用时，此设置才生效。
+  /// 
+  /// [enabled] - true 启用快捷上传，false 禁用快捷上传
+  static Future<void> setQuickUploadEnabled(bool enabled) async {
+    if (!Platform.isMacOS) return;
+    
+    try {
+      await _channel.invokeMethod('setQuickUploadEnabled', enabled);
+    } catch (e) {
+      debugPrint('Failed to set quick upload enabled: $e');
+    }
+  }
+  
+  /// 获取快捷上传功能是否启用
+  static Future<bool> isQuickUploadEnabled() async {
+    if (!Platform.isMacOS) return false;
+    
+    try {
+      final bool? enabled = await _channel.invokeMethod('getQuickUploadEnabled');
+      return enabled ?? true;
+    } catch (e) {
+      debugPrint('Failed to get quick upload enabled: $e');
+      return true;
+    }
+  }
 }
 
 /// Placeholder function for handling files dropped on menu bar icon.
@@ -92,6 +164,10 @@ void _setupMenuBarChannel() {
         final List<String> filePaths = (call.arguments as List).cast<String>();
         await onMenuBarFilesDropped(filePaths);
         break;
+      case 'openSettings':
+        // 从菜单栏打开设置页面
+        onOpenSettingsCallback?.call();
+        break;
       default:
         throw PlatformException(
           code: 'Unimplemented',
@@ -101,11 +177,19 @@ void _setupMenuBarChannel() {
   });
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Setup menu bar channel for macOS
   _setupMenuBarChannel();
+  
+  // 初始化菜单栏设置（仅 macOS）
+  if (Platform.isMacOS) {
+    // 延迟初始化，确保 Flutter 通道已建立
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      MenuBarSettingsManager.instance.initialize();
+    });
+  }
 
   // 设置系统UI样式
   SystemChrome.setSystemUIOverlayStyle(
@@ -172,6 +256,24 @@ class _AppShellState extends State<AppShell> {
     super.initState();
     _loadConfigs();
     McpSettingsManager.instance.initialize();
+    
+    // 注册从菜单栏打开设置页面的回调
+    onOpenSettingsCallback = _openSettingsPage;
+  }
+  
+  @override
+  void dispose() {
+    // 清除回调
+    if (onOpenSettingsCallback == _openSettingsPage) {
+      onOpenSettingsCallback = null;
+    }
+    super.dispose();
+  }
+  
+  void _openSettingsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
   }
 
   Future<void> _loadConfigs() async {

@@ -224,7 +224,7 @@ class DropZoneView: NSView {
     }
     
     // 提示文字
-    let text = isHovering ? "松开上传" : "拖放到此处"
+    let text = isHovering ? "Release to Upload" : "Drop Here"
     let textAttributes: [NSAttributedString.Key: Any] = [
       .font: NSFont.systemFont(ofSize: 12, weight: .medium),
       .foregroundColor: contentColor.withAlphaComponent(0.9)
@@ -333,6 +333,9 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   private var currentIconState: MenuBarIconState = .normal
   private var isFlutterControlled: Bool = false  // Flutter 是否正在控制图标状态
   private var dropZoneWindow: DropZoneWindow?
+  private var isMenuBarEnabled: Bool = true  // 菜单栏图标是否启用
+  private var isQuickUploadEnabled: Bool = true  // 快捷上传功能是否启用
+  private var dragMonitorTimer: Timer?  // 拖拽监控定时器引用
 
   private func log(_ message: String) {
     NSLog("[S3Manager] \(message)")
@@ -346,7 +349,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   
   private func setupGlobalDragMonitoring() {
     // 使用定时器轮询检查拖拽状态，这是最可靠的方法
-    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+    dragMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
       self?.checkForFileDrag()
     }
     
@@ -359,6 +362,77 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
       self?.resetDragState()
       return event
     }
+  }
+  
+  // MARK: - Menu Bar Visibility Control
+  
+  /// 设置菜单栏图标是否显示
+  func setMenuBarEnabled(_ enabled: Bool) {
+    log("setMenuBarEnabled: \(enabled)")
+    isMenuBarEnabled = enabled
+    
+    if enabled {
+      // 启用菜单栏图标
+      if statusItem == nil {
+        setupStatusItem()
+      }
+      // 如果快捷上传也启用，则启动拖拽监控
+      if isQuickUploadEnabled && dragMonitorTimer == nil {
+        setupGlobalDragMonitoring()
+      }
+    } else {
+      // 禁用菜单栏图标
+      hideDropZoneWindow()
+      
+      // 移除状态栏图标
+      if let item = statusItem {
+        NSStatusBar.system.removeStatusItem(item)
+        statusItem = nil
+      }
+      
+      // 停止拖拽监控（菜单栏关闭时，快捷上传也不可用）
+      dragMonitorTimer?.invalidate()
+      dragMonitorTimer = nil
+    }
+  }
+  
+  /// 获取菜单栏图标是否显示
+  func getMenuBarEnabled() -> Bool {
+    return isMenuBarEnabled
+  }
+  
+  /// 设置快捷上传功能是否启用
+  func setQuickUploadEnabled(_ enabled: Bool) {
+    log("setQuickUploadEnabled: \(enabled)")
+    isQuickUploadEnabled = enabled
+    
+    // 只有在菜单栏图标启用时，快捷上传设置才生效
+    if isMenuBarEnabled {
+      if enabled {
+        if dragMonitorTimer == nil {
+          setupGlobalDragMonitoring()
+        }
+      } else {
+        hideDropZoneWindow()
+        dragMonitorTimer?.invalidate()
+        dragMonitorTimer = nil
+      }
+    }
+  }
+  
+  /// 获取快捷上传功能是否启用
+  func getQuickUploadEnabled() -> Bool {
+    return isQuickUploadEnabled
+  }
+  
+  /// 打开设置页面
+  func openSettings() {
+    log("openSettings called")
+    // 激活应用
+    NSApp.activate(ignoringOtherApps: true)
+    showMainWindow()
+    // 通知 Flutter 跳转到设置页面
+    flutterChannel?.invokeMethod("openSettings", arguments: nil)
   }
   
   private var lastDragLogTime: Date = Date.distantPast
@@ -519,6 +593,24 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
         }
       case "getIconState":
         result(self?.currentIconState.rawValue)
+      case "setMenuBarEnabled":
+        if let enabled = call.arguments as? Bool {
+          self?.setMenuBarEnabled(enabled)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected bool argument", details: nil))
+        }
+      case "getMenuBarEnabled":
+        result(self?.getMenuBarEnabled())
+      case "setQuickUploadEnabled":
+        if let enabled = call.arguments as? Bool {
+          self?.setQuickUploadEnabled(enabled)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected bool argument", details: nil))
+        }
+      case "getQuickUploadEnabled":
+        result(self?.getQuickUploadEnabled())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -695,11 +787,16 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
 
     // 创建菜单但不直接设置到 statusItem，这样拖拽事件才能正常工作
     let menu = NSMenu()
-    let openItem = NSMenuItem(title: "打开应用", action: #selector(showMainWindow), keyEquivalent: "")
+    let openItem = NSMenuItem(title: "Open App", action: #selector(showMainWindow), keyEquivalent: "")
     openItem.target = self
     menu.addItem(openItem)
+    
+    let settingsItem = NSMenuItem(title: "Settings", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
+    settingsItem.target = self
+    menu.addItem(settingsItem)
+    
     menu.addItem(NSMenuItem.separator())
-    let quitItem = NSMenuItem(title: "退出", action: #selector(quitApp), keyEquivalent: "q")
+    let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
     quitItem.target = self
     menu.addItem(quitItem)
 
@@ -720,6 +817,10 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     NSApp.activate(ignoringOtherApps: true)
     let window = mainWindow ?? NSApplication.shared.windows.first
     window?.makeKeyAndOrderFront(nil)
+  }
+  
+  @objc private func openSettingsFromMenu() {
+    openSettings()
   }
 
   @objc private func quitApp() {

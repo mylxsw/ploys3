@@ -7,6 +7,8 @@ import 'package:ploys3/core/theme_manager.dart';
 import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
+import 'package:ploys3/core/menubar_settings_manager.dart';
+import 'package:ploys3/core/platform.dart';
 
 import 'package:ploys3/widgets/window_title_bar.dart';
 
@@ -21,6 +23,8 @@ class _SettingsPageState extends State<SettingsPage> {
   AppThemeMode _themeMode = AppThemeMode.system;
   AppLanguage _selectedLanguage = AppLanguage.chinese;
   bool _mcpEnabled = false;
+  bool _menuBarEnabled = true;
+  bool _quickUploadEnabled = true;
   final TextEditingController _mcpHostController = TextEditingController();
   final TextEditingController _mcpPortController = TextEditingController();
 
@@ -28,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     McpSettingsManager.instance.initialize();
+    MenuBarSettingsManager.instance.initialize();
     _loadSettings();
   }
 
@@ -36,8 +41,24 @@ class _SettingsPageState extends State<SettingsPage> {
       _themeMode = ThemeManager.instance.themeMode;
       _selectedLanguage = LanguageManager.instance.currentLanguage;
       _mcpEnabled = McpSettingsManager.instance.enabled;
+      _menuBarEnabled = MenuBarSettingsManager.instance.menuBarEnabled;
+      _quickUploadEnabled = MenuBarSettingsManager.instance.quickUploadEnabled;
       _mcpHostController.text = McpSettingsManager.instance.host;
       _mcpPortController.text = McpSettingsManager.instance.port.toString();
+    });
+  }
+
+  Future<void> _setMenuBarEnabled(bool enabled) async {
+    await MenuBarSettingsManager.instance.setMenuBarEnabled(enabled);
+    setState(() {
+      _menuBarEnabled = enabled;
+    });
+  }
+  
+  Future<void> _setQuickUploadEnabled(bool enabled) async {
+    await MenuBarSettingsManager.instance.setQuickUploadEnabled(enabled);
+    setState(() {
+      _quickUploadEnabled = enabled;
     });
   }
 
@@ -209,6 +230,46 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
+
+        // 菜单栏设置（仅 macOS）
+        if (Platform.isMacOS) ...[
+          Text(
+            context.loc('menubar_settings'),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          ),
+          const SizedBox(height: 8),
+
+          _buildSettingCard(
+            icon: Icons.menu,
+            title: context.loc('menubar_enable'),
+            subtitle: context.loc('menubar_enable_desc'),
+            trailing: Switch.adaptive(
+              value: _menuBarEnabled,
+              onChanged: _setMenuBarEnabled,
+            ),
+            isMobile: isMobile,
+          ),
+          
+          const SizedBox(height: 12),
+          
+          Opacity(
+            opacity: _menuBarEnabled ? 1.0 : 0.5,
+            child: _buildSettingCard(
+              icon: Icons.upload_outlined,
+              title: context.loc('quick_upload_enable'),
+              subtitle: context.loc('quick_upload_enable_desc'),
+              trailing: Switch.adaptive(
+                value: _quickUploadEnabled,
+                onChanged: _menuBarEnabled ? _setQuickUploadEnabled : null,
+              ),
+              isMobile: isMobile,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+        ],
 
         // MCP 设置
         Text(

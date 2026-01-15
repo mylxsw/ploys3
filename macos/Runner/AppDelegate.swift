@@ -9,8 +9,8 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   private var isTerminating: Bool = false
 
   private func log(_ message: String) {
-    NSLog(message)
-    print(message)
+    // NSLog(message)
+    // print(message)
   }
 
   override func applicationDidFinishLaunching(_ aNotification: Notification) {

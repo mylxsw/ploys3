@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:minio/minio.dart' as minio;
 import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/core/language_manager.dart';
@@ -15,13 +16,13 @@ class R2ConnectionHelper {
     // For R2, we might need to use path-style addressing
     // and ensure the endpoint is correct
 
-    print('R2 Connection Helper:');
-    print('  Original URL: ${config.address}');
-    print('  Endpoint: $endPoint');
-    print('  Port: $port');
-    print('  SSL: $useSSL');
-    print('  Region: ${config.region ?? 'auto'}');
-    print('  Bucket: ${config.bucket}');
+    debugPrint('R2 Connection Helper:');
+    debugPrint('  Original URL: ${config.address}');
+    debugPrint('  Endpoint: $endPoint');
+    debugPrint('  Port: $port');
+    debugPrint('  SSL: $useSSL');
+    debugPrint('  Region: ${config.region ?? 'auto'}');
+    debugPrint('  Bucket: ${config.bucket}');
 
     // Try different configurations for R2
 
@@ -36,7 +37,7 @@ class R2ConnectionHelper {
         region: config.region ?? 'auto',
       );
     } catch (e) {
-      print('Standard config failed: $e');
+      debugPrint('Standard config failed: $e');
 
       // Configuration 2: Try with us-east-1 region
       try {
@@ -49,7 +50,7 @@ class R2ConnectionHelper {
           region: 'us-east-1',
         );
       } catch (e2) {
-        print('us-east-1 config failed: $e2');
+        debugPrint('us-east-1 config failed: $e2');
 
         // Re-throw the original error
         throw e;

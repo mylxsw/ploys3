@@ -20,7 +20,7 @@ struct DropZoneFileFilter {
     // 图片格式
     "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tiff", "tif", "ico", "heic", "heif",
     // 其它格式
-    "pdf", "doc", "docx", "txt", "mp4", "mov"
+    "pdf", "doc", "docx", "txt", "md", "mp4", "mov", "mp3", "wav"
   ]
   
   // 检查文件是否符合过滤条件
@@ -363,6 +363,8 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   
   private var lastDragLogTime: Date = Date.distantPast
   private var lastPasteboardChangeCount: Int = 0
+  private var dragStartChangeCount: Int = -1  // 记录拖拽开始时的 changeCount
+  private var lastMouseDownState: Bool = false
   
   private func checkForFileDrag() {
     // 如果 Flutter 正在控制图标状态，不要干扰
@@ -370,6 +372,11 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     
     // 检查鼠标是否按下（正在拖拽）
     let mouseDown = NSEvent.pressedMouseButtons & 1 != 0
+    
+    // 检测鼠标按下的边沿（从未按下变为按下）
+    let mouseJustPressed = mouseDown && !lastMouseDownState
+    lastMouseDownState = mouseDown
+    
     if !mouseDown { return }
     
     // 检查拖拽剪贴板是否有文件
@@ -379,19 +386,30 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     // 如果剪贴板为空，直接返回
     if types.isEmpty { return }
     
-    // 检查剪贴板是否有新的变化（避免使用旧的剪贴板数据）
+    // 获取当前剪贴板变化计数
     let currentChangeCount = dragPasteboard.changeCount
+    
+    // 关键：只有当剪贴板在鼠标按下后发生变化时，才认为是真正的拖拽
+    // 这样可以避免仅仅选中文件就触发的问题
+    if mouseJustPressed {
+      // 记录鼠标刚按下时的 changeCount
+      dragStartChangeCount = currentChangeCount
+      return  // 第一次检测时不触发，等待下一次检测
+    }
+    
+    // 如果 changeCount 没有变化（与拖拽开始时相同），说明不是新的拖拽操作
+    if currentChangeCount == dragStartChangeCount {
+      return
+    }
+    
+    // 如果已经处理过这个 changeCount，跳过
+    if currentChangeCount == lastPasteboardChangeCount {
+      return
+    }
     
     // 检查当前活动的应用是否是 Finder
     let frontApp = NSWorkspace.shared.frontmostApplication
     let isFinderActive = frontApp?.bundleIdentifier == "com.apple.finder"
-    
-    // 调试日志（每秒最多输出一次）
-    let now = Date()
-    if now.timeIntervalSince(lastDragLogTime) > 1.0 {
-      lastDragLogTime = now
-      log("checkForFileDrag: isFinderActive=\(isFinderActive), changeCount=\(currentChangeCount), lastChangeCount=\(lastPasteboardChangeCount)")
-    }
     
     // 只有当 Finder 是当前活动应用时才检测
     if !isFinderActive { return }

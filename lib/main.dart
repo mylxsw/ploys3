@@ -15,7 +15,6 @@ import 'package:ploys3/core/localization.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
-import 'package:flutter/foundation.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');

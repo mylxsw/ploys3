@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart' as path;
 import 'package:ploys3/core/platform.dart';
@@ -46,6 +49,7 @@ class UploadManager extends ChangeNotifier {
 
   bool _isProcessing = false;
   final Set<String> _notifiedItemIds = {};
+  UploadItem? _lastSuccessItem;
 
   UploadManager({required StorageService service, String? cdnUrl, this.onUploadComplete})
     : _service = service,
@@ -147,6 +151,7 @@ class UploadManager extends ChangeNotifier {
           item.status = UploadStatus.success;
           item.progress = 1.0;
           item.resultUrl = _buildFileUrl(item.targetKey);
+          _lastSuccessItem = item;
           // Trigger callback to refresh file list
           onUploadComplete?.call();
         } catch (e) {
@@ -192,12 +197,65 @@ class UploadManager extends ChangeNotifier {
       _notifiedItemIds.add(item.id);
     }
 
+    final lastItem = _lastSuccessItem ?? completedItems.last;
+    final lastUrl = lastItem.resultUrl ?? _buildFileUrl(lastItem.targetKey);
+    Clipboard.setData(ClipboardData(text: lastUrl));
+
+    final count = completedItems.length;
+    final body = count <= 1 ? '文件已上传成功' : '已成功上传 $count 个文件';
+    final isImage = _isImageFile(lastItem.fileName);
+    final markdown = isImage ? '![image]($lastUrl)' : '';
+    final payload = json.encode({'markdown': markdown, 'url': lastUrl, 'isImage': isImage});
+    final details = _buildNotificationDetails();
+    _notifications!.show(_notificationId, '上传完成', body, details, payload: payload);
+  }
+
+  bool _isImageFile(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    const imageExts = {
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'webp',
+      'svg',
+      'tif',
+      'tiff',
+      'heic',
+      'heif',
+      'ico',
+    };
+    return imageExts.contains(ext);
+  }
+
+  NotificationDetails _buildNotificationDetails() {
     if (Platform.isMacOS) {
-      const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
-      const NotificationDetails details = NotificationDetails(macOS: darwinDetails);
-      final count = completedItems.length;
-      final body = count <= 1 ? '文件已上传成功' : '已成功上传 $count 个文件';
-      _notifications!.show(_notificationId, '上传完成', body, details);
+      const darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+      return const NotificationDetails(macOS: darwinDetails);
     }
+
+    if (defaultTargetPlatform == TargetPlatform.linux) {
+      const linuxDetails = LinuxNotificationDetails();
+      return const NotificationDetails(linux: linuxDetails);
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      const darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+      return const NotificationDetails(iOS: darwinDetails);
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      const androidDetails = AndroidNotificationDetails(
+        'upload_complete',
+        'Upload Complete',
+        channelDescription: 'Notifications for completed uploads',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      );
+      return const NotificationDetails(android: androidDetails);
+    }
+
+    return const NotificationDetails();
   }
 }

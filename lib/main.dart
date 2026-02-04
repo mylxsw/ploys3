@@ -51,14 +51,22 @@ Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
 }
 
 Future<void> _initLocalNotifications() async {
-  if (!Platform.isMacOS) return;
   const DarwinInitializationSettings darwinSettings = DarwinInitializationSettings(
     requestAlertPermission: true,
     requestBadgePermission: true,
     requestSoundPermission: true,
   );
-  const InitializationSettings initSettings = InitializationSettings(macOS: darwinSettings);
-  await _localNotifications.initialize(initSettings);
+  const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const LinuxInitializationSettings linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open');
+  const InitializationSettings initSettings = InitializationSettings(
+    macOS: darwinSettings,
+    android: androidSettings,
+    linux: linuxSettings,
+  );
+  await _localNotifications.initialize(
+    initSettings,
+    onDidReceiveNotificationResponse: _handleNotificationResponse,
+  );
   UploadManager.initializeNotifications(_localNotifications);
 }
 
@@ -169,6 +177,19 @@ void _setupMenuBarChannel() {
         throw PlatformException(code: 'Unimplemented', details: 'Method ${call.method} not implemented');
     }
   });
+}
+
+void _handleNotificationResponse(NotificationResponse response) {
+  final payload = response.payload;
+  if (payload == null || payload.isEmpty) return;
+  try {
+    final data = json.decode(payload) as Map<String, dynamic>;
+    final markdown = data['markdown']?.toString() ?? '';
+    final isImage = data['isImage'] == true;
+    if (!Platform.isDesktop || !isImage) return;
+    if (markdown.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: markdown));
+  } catch (_) {}
 }
 
 void main() async {

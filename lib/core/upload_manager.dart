@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path/path.dart' as path;
+import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 
 enum UploadStatus { pending, uploading, success, failed }
@@ -29,45 +32,58 @@ class UploadItem {
 }
 
 class UploadManager extends ChangeNotifier {
+  static FlutterLocalNotificationsPlugin? _notifications;
+  static const int _notificationId = 2001;
+
+  static void initializeNotifications(FlutterLocalNotificationsPlugin plugin) {
+    _notifications = plugin;
+  }
+
   final List<UploadItem> _queue = [];
   final StorageService _service;
   final String? _cdnUrl;
   final VoidCallback? onUploadComplete;
 
   bool _isProcessing = false;
+  final Set<String> _notifiedItemIds = {};
 
-  UploadManager({
-    required StorageService service,
-    String? cdnUrl,
-    this.onUploadComplete,
-  }) : _service = service,
-       _cdnUrl = cdnUrl;
+  UploadManager({required StorageService service, String? cdnUrl, this.onUploadComplete})
+    : _service = service,
+      _cdnUrl = cdnUrl;
 
   List<UploadItem> get queue => List.unmodifiable(_queue);
 
-  bool get hasActiveUploads => _queue.any(
-    (item) =>
-        item.status == UploadStatus.uploading ||
-        item.status == UploadStatus.pending,
-  );
+  bool get hasActiveUploads =>
+      _queue.any((item) => item.status == UploadStatus.uploading || item.status == UploadStatus.pending);
 
   void addToQueue(List<String> filePaths, String targetPrefix) {
+    addToQueueWithNameResolver(filePaths, targetPrefix, (filePath) => path.basename(filePath));
+  }
+
+  List<UploadItem> addToQueueWithNameResolver(
+    List<String> filePaths,
+    String targetPrefix,
+    String Function(String path) nameResolver,
+  ) {
+    final addedItems = <UploadItem>[];
     for (final path in filePaths) {
-      final fileName = path.split(Platform.pathSeparator).last;
+      final fileName = nameResolver(path);
+      if (fileName.isEmpty) continue;
       final key = targetPrefix.isEmpty ? fileName : '$targetPrefix$fileName';
 
-      _queue.add(
-        UploadItem(
-          filePath: path,
-          fileName: fileName,
-          targetBucket: _service.bucketName,
-          targetKey: key,
-          cdnUrl: _cdnUrl,
-        ),
+      final item = UploadItem(
+        filePath: path,
+        fileName: fileName,
+        targetBucket: _service.bucketName,
+        targetKey: key,
+        cdnUrl: _cdnUrl,
       );
+      _queue.add(item);
+      addedItems.add(item);
     }
     notifyListeners();
     _processQueue();
+    return addedItems;
   }
 
   void retry(UploadItem item) {
@@ -105,9 +121,7 @@ class UploadManager extends ChangeNotifier {
     try {
       while (true) {
         // Find next pending item
-        final pendingItems = _queue
-            .where((item) => item.status == UploadStatus.pending)
-            .toList();
+        final pendingItems = _queue.where((item) => item.status == UploadStatus.pending).toList();
         if (pendingItems.isEmpty) break;
 
         final item = pendingItems.first;
@@ -142,6 +156,7 @@ class UploadManager extends ChangeNotifier {
 
         notifyListeners();
       }
+      _notifyIfBatchCompleted();
     } finally {
       _isProcessing = false;
     }
@@ -158,5 +173,31 @@ class UploadManager extends ChangeNotifier {
     // Fallback if no CDN, maybe simple key or presigned?
     // Usually standard S3 URL structure or just key.
     return key;
+  }
+
+  void _notifyIfBatchCompleted() {
+    if (_notifications == null) return;
+    final hasActive = _queue.any(
+      (item) => item.status == UploadStatus.pending || item.status == UploadStatus.uploading,
+    );
+    if (hasActive) return;
+
+    final completedItems = _queue
+        .where((item) => item.status == UploadStatus.success)
+        .where((item) => !_notifiedItemIds.contains(item.id))
+        .toList();
+    if (completedItems.isEmpty) return;
+
+    for (final item in completedItems) {
+      _notifiedItemIds.add(item.id);
+    }
+
+    if (Platform.isMacOS) {
+      const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+      const NotificationDetails details = NotificationDetails(macOS: darwinDetails);
+      final count = completedItems.length;
+      final body = count <= 1 ? '文件已上传成功' : '已成功上传 $count 个文件';
+      _notifications!.show(_notificationId, '上传完成', body, details);
+    }
   }
 }

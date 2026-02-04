@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -20,11 +19,19 @@ import 'package:ploys3/core/menubar_settings_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:ploys3/core/upload_manager.dart';
+import 'package:ploys3/core/storage/s3_storage_service.dart';
+import 'package:ploys3/image_bed_settings_page.dart';
+import 'package:path/path.dart' as p;
+import 'package:ploys3/widgets/upload_queue_ui.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
 
 final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+final ValueNotifier<UploadManager?> _imageBedUploadManagerNotifier = ValueNotifier<UploadManager?>(null);
+UploadManager? _imageBedUploadManager;
+String? _imageBedUploadServerId;
 
 /// 全局导航 key，用于从菜单栏打开设置页面
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -34,15 +41,13 @@ VoidCallback? onOpenSettingsCallback;
 
 /// Placeholder function for handling files dropped on menu bar icon.
 Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
-  // TODO: Implement upload logic here
-  // Example: You might want to:
-  // 1. Show a dialog to select target server/bucket
-  // 2. Start uploading files to S3
-  // 3. Show upload progress
-  // 4. Use MenuBarIconController.setUploading() to show uploading state
-  // 5. Use MenuBarIconController.resetToNormal() when done
-  debugPrint('Files dropped on menu bar: $filePaths');
-  await _showUploadCompleteNotification(filePaths.length);
+  if (filePaths.isEmpty) return;
+  final config = await _loadImageBedConfig();
+  if (config == null) {
+    await _promptConfigureImageBed();
+    return;
+  }
+  await _uploadImageBedFiles(filePaths, config);
 }
 
 Future<void> _initLocalNotifications() async {
@@ -54,14 +59,99 @@ Future<void> _initLocalNotifications() async {
   );
   const InitializationSettings initSettings = InitializationSettings(macOS: darwinSettings);
   await _localNotifications.initialize(initSettings);
+  UploadManager.initializeNotifications(_localNotifications);
 }
 
-Future<void> _showUploadCompleteNotification(int fileCount) async {
-  if (!Platform.isMacOS) return;
-  const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
-  const NotificationDetails details = NotificationDetails(macOS: darwinDetails);
-  final String body = fileCount <= 1 ? '文件已上传成功' : '已成功上传 $fileCount 个文件';
-  await _localNotifications.show(1001, '上传完成', body, details);
+class _ImageBedConfig {
+  _ImageBedConfig({required this.server, required this.uploadDir, required this.namingRule});
+
+  final S3ServerConfig server;
+  final String uploadDir;
+  final ImageBedNamingRule namingRule;
+}
+
+Future<_ImageBedConfig?> _loadImageBedConfig() async {
+  final prefs = await SharedPreferences.getInstance();
+  final serverId = prefs.getString('image_bed_server_id') ?? '';
+  if (serverId.isEmpty) return null;
+
+  final serverConfigs = prefs.getStringList('server_configs') ?? [];
+  final servers = serverConfigs.map((config) => S3ServerConfig.fromJson(json.decode(config))).toList();
+  final server = servers.cast<S3ServerConfig?>().firstWhere((s) => s?.id == serverId, orElse: () => null);
+  if (server == null) return null;
+
+  final uploadDir = prefs.getString('image_bed_upload_dir') ?? '';
+  final namingRuleRaw = prefs.getString('image_bed_naming_rule') ?? 'original';
+  final namingRule = namingRuleRaw == 'random' ? ImageBedNamingRule.random : ImageBedNamingRule.original;
+
+  return _ImageBedConfig(server: server, uploadDir: uploadDir, namingRule: namingRule);
+}
+
+Future<void> _promptConfigureImageBed() async {
+  final ctx = navigatorKey.currentContext;
+  if (ctx == null) return;
+
+  final shouldOpen = await showDialog<bool>(
+    context: ctx,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(context.loc('image_bed_settings')),
+        content: Text(context.loc('image_bed_config_required')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.loc('image_bed_go_config'))),
+        ],
+      );
+    },
+  );
+
+  if (shouldOpen == true && ctx.mounted) {
+    Navigator.push(ctx, MaterialPageRoute(builder: (context) => const ImageBedSettingsPage()));
+  }
+}
+
+Future<void> _uploadImageBedFiles(List<String> filePaths, _ImageBedConfig config) async {
+  final uploadManager = _getOrCreateImageBedUploadManager(config);
+
+  final targetPrefix = _normalizeUploadPrefix(config.uploadDir);
+  uploadManager.addToQueueWithNameResolver(
+    filePaths,
+    targetPrefix,
+    (path) => _resolveImageBedFileName(path, config.namingRule),
+  );
+}
+
+String _normalizeUploadPrefix(String uploadDir) {
+  if (uploadDir.isEmpty) return '';
+  return uploadDir.endsWith('/') ? uploadDir : '$uploadDir/';
+}
+
+String _resolveImageBedFileName(String filePath, ImageBedNamingRule namingRule) {
+  final originalName = p.basename(filePath);
+  if (namingRule == ImageBedNamingRule.original) {
+    return originalName;
+  }
+
+  final dotIndex = originalName.lastIndexOf('.');
+  final extension = dotIndex > 0 ? originalName.substring(dotIndex) : '';
+  final now = DateTime.now();
+  final timestamp =
+      '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+  final uuid =
+      '${math.Random().nextInt(0x7FFFFFFF).toRadixString(36)}-${math.Random().nextInt(0x7FFFFFFF).toRadixString(36)}';
+  return '$timestamp-$uuid$extension';
+}
+
+UploadManager _getOrCreateImageBedUploadManager(_ImageBedConfig config) {
+  final serverId = config.server.id;
+  if (_imageBedUploadManager != null && _imageBedUploadServerId == serverId) {
+    return _imageBedUploadManager!;
+  }
+  final service = S3StorageService(config.server);
+  _imageBedUploadManager = UploadManager(service: service, cdnUrl: config.server.cdnUrl);
+  _imageBedUploadServerId = serverId;
+  _imageBedUploadManagerNotifier.value = _imageBedUploadManager;
+  return _imageBedUploadManager!;
 }
 
 void _setupMenuBarChannel() {
@@ -110,7 +200,7 @@ void main() async {
 
   if (Platform.isDesktop) {
     doWhenWindowReady(() {
-      const initialSize = Size(1280, 800);
+      const initialSize = Size(960, 700);
       appWindow.minSize = const Size(800, 600);
       appWindow.size = initialSize;
       appWindow.alignment = Alignment.center;
@@ -133,6 +223,7 @@ class App extends StatelessWidget {
           title: LanguageManager.instance.getLocalized('app_name_s3'),
           theme: ThemeManager.instance.currentTheme,
           debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
           home: const LanguageProvider(child: ThemeProvider(child: AppShell())),
         );
       },
@@ -739,31 +830,44 @@ class _AppShellState extends State<AppShell> {
                 },
                 onOpenDrawer: onOpenDrawer,
               )
-            : Scaffold(
-                appBar: onOpenDrawer != null
-                    ? AppBar(
-                        title: Text(context.loc("s3_manager")),
-                        centerTitle: true,
-                        leading: IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
-                        elevation: 0,
-                        scrolledUnderElevation: 0,
-                        actions: [
-                          IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) =>
-                                      S3ConfigPage(onSave: _loadConfigs),
-                                ),
-                              );
-                            },
-                            icon: Icon(Icons.add),
-                          ),
-                        ],
-                      )
-                    : null,
-                body: _serverConfigs.isEmpty ? _buildEmptyState(context) : _buildServerPicker(context),
+            : Stack(
+                children: [
+                  Scaffold(
+                    appBar: onOpenDrawer != null
+                        ? AppBar(
+                            title: Text(context.loc("s3_manager")),
+                            centerTitle: true,
+                            leading: IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
+                            elevation: 0,
+                            scrolledUnderElevation: 0,
+                            actions: [
+                              IconButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      pageBuilder: (context, animation, secondaryAnimation) =>
+                                          S3ConfigPage(onSave: _loadConfigs),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(Icons.add),
+                              ),
+                            ],
+                          )
+                        : null,
+                    body: _serverConfigs.isEmpty ? _buildEmptyState(context) : _buildServerPicker(context),
+                  ),
+                  ValueListenableBuilder<UploadManager?>(
+                    valueListenable: _imageBedUploadManagerNotifier,
+                    builder: (context, manager, child) {
+                      if (manager == null || manager.queue.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return UploadQueueUI(uploadManager: manager);
+                    },
+                  ),
+                ],
               ),
       ),
     );

@@ -100,6 +100,8 @@ class LanguageManager extends ChangeNotifier {
       'image_bed_no_server_title': '尚未创建 S3 服务',
       'image_bed_no_server_desc': '请先创建一个 S3 服务后再配置图床设置。',
       'image_bed_add_server': '新建 S3 服务',
+      'image_bed_config_required': '图床尚未配置，请先完成设置。',
+      'image_bed_go_config': '立即去配置',
 
       // 服务器列表
       'test_connection': '测试连接',
@@ -356,6 +358,8 @@ class LanguageManager extends ChangeNotifier {
       'image_bed_no_server_title': 'No S3 Service Found',
       'image_bed_no_server_desc': 'Create an S3 service before configuring image bed settings.',
       'image_bed_add_server': 'Create S3 Service',
+      'image_bed_config_required': 'Image bed is not configured yet. Please set it up first.',
+      'image_bed_go_config': 'Configure Now',
 
       // Server list
       'test_connection': 'Test Connection',

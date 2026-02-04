@@ -250,6 +250,9 @@ class MenuBarUploadCoordinator {
     if (uploading) {
       MenuBarIconController.setUploading();
     } else {
+      if (UploadManager.hasAnyActiveUploads) {
+        return;
+      }
       MenuBarIconController.resetToNormal();
     }
   }

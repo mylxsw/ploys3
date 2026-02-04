@@ -742,24 +742,27 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
   }
   
   func setIconState(_ state: MenuBarIconState) {
-    guard currentIconState != state else { return }
-    currentIconState = state
-    
-    guard let button = statusItem?.button else { return }
-    
-    if state == .uploading {
-      startUploadAnimation()
-      return
-    }
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      guard self.currentIconState != state else { return }
+      self.currentIconState = state
 
-    stopUploadAnimation()
-    let symbolName = MenuBarIconConfig.symbol(for: state)
-    if let image = createStatusImage(symbolName: symbolName) {
-      button.image = image
-      button.title = ""
-    } else {
-      button.image = fallbackStatusImage(for: state)
-      button.title = ""
+      guard let button = self.statusItem?.button else { return }
+
+      if state == .uploading {
+        self.startUploadAnimation()
+        return
+      }
+
+      self.stopUploadAnimation()
+      let symbolName = MenuBarIconConfig.symbol(for: state)
+      if let image = self.createStatusImage(symbolName: symbolName) {
+        button.image = image
+        button.title = ""
+      } else {
+        button.image = self.fallbackStatusImage(for: state)
+        button.title = ""
+      }
     }
   }
 
@@ -770,6 +773,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
       self?.uploadAnimationPhase.toggle()
       self?.updateUploadIcon()
     }
+    RunLoop.main.add(uploadAnimationTimer!, forMode: .common)
   }
 
   private func stopUploadAnimation() {

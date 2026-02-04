@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart' as path;
 import 'package:ploys3/core/language_manager.dart';
+import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 
@@ -42,6 +43,8 @@ class UploadManager extends ChangeNotifier {
   static const int _notificationId = 2001;
   static const String copyMarkdownActionId = 'copy_markdown';
   static const String copyMarkdownCategoryId = 'upload_complete_markdown';
+  static final Set<UploadManager> _activeManagers = {};
+  static bool get hasAnyActiveUploads => _activeManagers.isNotEmpty;
 
   static void initializeNotifications(FlutterLocalNotificationsPlugin plugin) {
     _notifications = plugin;
@@ -92,6 +95,9 @@ class UploadManager extends ChangeNotifier {
       addedItems.add(item);
     }
     notifyListeners();
+    if (addedItems.isNotEmpty) {
+      _markActive();
+    }
     _processQueue();
     return addedItems;
   }
@@ -120,6 +126,7 @@ class UploadManager extends ChangeNotifier {
     if (!hasActiveUploads) {
       _queue.clear();
       notifyListeners();
+      _markInactive();
     }
   }
 
@@ -169,6 +176,9 @@ class UploadManager extends ChangeNotifier {
       _notifyIfBatchCompleted();
     } finally {
       _isProcessing = false;
+      if (!hasActiveUploads) {
+        _markInactive();
+      }
     }
   }
 
@@ -191,6 +201,7 @@ class UploadManager extends ChangeNotifier {
       (item) => item.status == UploadStatus.pending || item.status == UploadStatus.uploading,
     );
     if (hasActive) return;
+    _markInactive();
 
     final completedItems = _queue
         .where((item) => item.status == UploadStatus.success)
@@ -225,6 +236,28 @@ class UploadManager extends ChangeNotifier {
       notificationDetails: details,
       payload: payload,
     );
+  }
+
+  void _markActive() {
+    if (!_activeManagers.contains(this)) {
+      _activeManagers.add(this);
+      _updateMenuBarUploadingState();
+    }
+  }
+
+  void _markInactive() {
+    if (_activeManagers.remove(this)) {
+      _updateMenuBarUploadingState();
+    }
+  }
+
+  static void _updateMenuBarUploadingState() {
+    if (!Platform.isMacOS) return;
+    if (_activeManagers.isNotEmpty) {
+      MenuBarIconController.setUploading();
+    } else {
+      MenuBarIconController.resetToNormal();
+    }
   }
 
   bool _isImageFile(String fileName) {

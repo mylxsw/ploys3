@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
-import 'package:ploys3/main.dart';
 
 /// 菜单栏设置管理器
 /// 

@@ -11,6 +11,7 @@ import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/download_manager.dart';
 import 'package:ploys3/widgets/loading_overlay.dart';
 import 'package:ploys3/core/localization.dart';
+import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/upload_manager.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
 import 'package:ploys3/widgets/download_queue_ui.dart';
@@ -92,6 +93,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   }
 
   @override
+  void dispose() {
+    MenuBarUploadCoordinator.instance.unregisterUploadContext(_uploadManager);
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(S3BrowserPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.serverConfig.id != oldWidget.serverConfig.id) {
@@ -105,6 +112,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       _initializeService();
       _listObjects();
     }
+  }
+
+  void _updateMenuBarUploadContext() {
+    MenuBarUploadCoordinator.instance.registerUploadContext(
+      uploadManager: _uploadManager,
+      targetPrefix: _currentPrefix,
+    );
   }
 
   void _initializeService() {
@@ -127,6 +141,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           _listObjects(prefix: _currentPrefix);
         },
       );
+      _updateMenuBarUploadContext();
 
       // Initialize DownloadManager
       _downloadManager = DownloadManager(
@@ -533,6 +548,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       // Do not clear objects or set loading here.
       // _listObjects will handle it based on cache.
     });
+    _updateMenuBarUploadContext();
     _listObjects(prefix: prefix);
   }
 
@@ -1684,6 +1700,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                 _objects = [];
                 _isLoading = true;
               });
+              _updateMenuBarUploadContext();
               _listObjects(prefix: '');
             },
             icon: const Icon(Icons.home),

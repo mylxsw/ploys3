@@ -1,6 +1,7 @@
 import Cocoa
 import FlutterMacOS
 import UniformTypeIdentifiers
+import UserNotifications
 
 // MARK: - Menu Bar Icon State
 // 菜单栏图标状态枚举
@@ -49,12 +50,14 @@ struct MenuBarIconConfig {
   static let hoverSymbol = "arrow.up.to.line.circle.fill"
   // 上传中状态的 SF Symbol 名称（Flutter 端控制）
   static let uploadingSymbol = "icloud.and.arrow.up"
+  static let uploadingSymbolAlt = "arrow.up.circle.fill"
   
   // 旧版 macOS 的后备文本（不支持 SF Symbols 时使用）
   static let normalFallbackText = "S3"
   static let readyFallbackText = "↑"
   static let hoverFallbackText = "⬆"
   static let uploadingFallbackText = "..."
+  static let uploadingFallbackTextAlt = "⬆"
   
   static func symbol(for state: MenuBarIconState) -> String {
     switch state {
@@ -333,7 +336,7 @@ class DraggableStatusBarView: NSView {
 }
 
 @main
-class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
+class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCenterDelegate {
   private var statusItem: NSStatusItem?
   private var statusMenu: NSMenu?
   private weak var mainWindow: NSWindow?
@@ -348,6 +351,10 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
   private var isMenuBarEnabled: Bool = true  // 菜单栏图标是否启用
   private var isQuickUploadEnabled: Bool = true  // 快捷上传功能是否启用
   private var dragMonitorTimer: Timer?  // 拖拽监控定时器引用
+  private var uploadAnimationTimer: Timer?
+  private var uploadAnimationPhase: Bool = false
+  private var notificationAuthorizationRequested: Bool = false
+  private var notificationAuthorized: Bool = false
 
   private func log(_ message: String) {
     NSLog("[S3Manager] \(message)")
@@ -623,6 +630,15 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
         }
       case "getQuickUploadEnabled":
         result(self?.getQuickUploadEnabled())
+      case "showNotification":
+        if let payload = call.arguments as? [String: String],
+           let title = payload["title"],
+           let body = payload["body"] {
+          self?.showNotification(title: title, body: body)
+          result(nil)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected title/body", details: nil))
+        }
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -635,6 +651,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     log("AppDelegate awakeFromNib")
 
     NSApp.setActivationPolicy(.regular)
+    UNUserNotificationCenter.current().delegate = self
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
       NSApp.activate(ignoringOtherApps: true)
@@ -651,6 +668,14 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
         self?.bindMainWindow(window)
       }
     }
+  }
+
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.alert, .sound])
   }
 
   func bindMainWindow(_ window: NSWindow) {
@@ -694,12 +719,12 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     return nil
   }
   
-  private func fallbackStatusImage(for state: MenuBarIconState) -> NSImage {
+  private func fallbackStatusImage(for state: MenuBarIconState, overrideText: String? = nil) -> NSImage {
     let size = NSSize(width: 18, height: 18)
     let image = NSImage(size: size)
     image.lockFocus()
     
-    let text = MenuBarIconConfig.fallbackText(for: state) as NSString
+    let text = (overrideText ?? MenuBarIconConfig.fallbackText(for: state)) as NSString
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
     let fontSize: CGFloat = state == .normal ? 10 : 14
@@ -722,6 +747,12 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     
     guard let button = statusItem?.button else { return }
     
+    if state == .uploading {
+      startUploadAnimation()
+      return
+    }
+
+    stopUploadAnimation()
     let symbolName = MenuBarIconConfig.symbol(for: state)
     if let image = createStatusImage(symbolName: symbolName) {
       button.image = image
@@ -729,6 +760,65 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
     } else {
       button.image = fallbackStatusImage(for: state)
       button.title = ""
+    }
+  }
+
+  private func startUploadAnimation() {
+    updateUploadIcon()
+    uploadAnimationTimer?.invalidate()
+    uploadAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { [weak self] _ in
+      self?.uploadAnimationPhase.toggle()
+      self?.updateUploadIcon()
+    }
+  }
+
+  private func stopUploadAnimation() {
+    uploadAnimationTimer?.invalidate()
+    uploadAnimationTimer = nil
+    uploadAnimationPhase = false
+  }
+
+  private func updateUploadIcon() {
+    guard let button = statusItem?.button else { return }
+    let symbolName = uploadAnimationPhase
+      ? MenuBarIconConfig.uploadingSymbolAlt
+      : MenuBarIconConfig.uploadingSymbol
+    let fallbackText = uploadAnimationPhase
+      ? MenuBarIconConfig.uploadingFallbackTextAlt
+      : MenuBarIconConfig.uploadingFallbackText
+
+    if let image = createStatusImage(symbolName: symbolName) {
+      button.image = image
+      button.title = ""
+    } else {
+      button.image = fallbackStatusImage(for: .uploading, overrideText: fallbackText)
+      button.title = ""
+    }
+  }
+
+  private func requestNotificationAuthorizationIfNeeded(completion: @escaping (Bool) -> Void) {
+    if notificationAuthorizationRequested {
+      completion(notificationAuthorized)
+      return
+    }
+
+    notificationAuthorizationRequested = true
+    let center = UNUserNotificationCenter.current()
+    center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+      self?.notificationAuthorized = granted
+      completion(granted)
+    }
+  }
+
+  private func showNotification(title: String, body: String) {
+    requestNotificationAuthorizationIfNeeded { granted in
+      guard granted else { return }
+      let content = UNMutableNotificationContent()
+      content.title = title
+      content.body = body
+
+      let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+      UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
   }
   

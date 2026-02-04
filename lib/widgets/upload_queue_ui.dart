@@ -120,15 +120,20 @@ class _UploadQueueUIState extends State<UploadQueueUI> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Text(
-                context.loc('upload_queue'),
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text(
+                  context.loc('upload_queue'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (queue.every(
                     (i) =>
@@ -139,10 +144,14 @@ class _UploadQueueUIState extends State<UploadQueueUI> {
                       icon: const Icon(Icons.clear_all),
                       tooltip: context.loc('clear_completed'),
                       onPressed: () => widget.uploadManager.clearAll(),
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      padding: EdgeInsets.zero,
                     ),
                   IconButton(
                     icon: const Icon(Icons.keyboard_arrow_down),
                     onPressed: () => setState(() => _isExpanded = false),
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    padding: EdgeInsets.zero,
                   ),
                 ],
               ),

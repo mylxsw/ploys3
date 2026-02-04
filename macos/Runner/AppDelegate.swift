@@ -256,27 +256,27 @@ class DropZoneView: NSView {
   
   override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
     isHovering = true
-    dropWindow?.appDelegate?.setIconState(.hover)
+    dropWindow?.appDelegate?.setIconStateFromDrag(.hover)
     needsDisplay = true
     return .copy
   }
   
   override func draggingExited(_ sender: NSDraggingInfo?) {
     isHovering = false
-    dropWindow?.appDelegate?.setIconState(.ready)
+    dropWindow?.appDelegate?.setIconStateFromDrag(.ready)
     needsDisplay = true
   }
   
   override func draggingEnded(_ sender: NSDraggingInfo) {
     isHovering = false
-    dropWindow?.appDelegate?.setIconState(.normal)
+    dropWindow?.appDelegate?.setIconStateFromDrag(.normal)
     dropWindow?.appDelegate?.hideDropZoneWindow()
     needsDisplay = true
   }
   
   override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
     isHovering = false
-    dropWindow?.appDelegate?.setIconState(.normal)
+    dropWindow?.appDelegate?.setIconStateFromDrag(.normal)
     dropWindow?.appDelegate?.hideDropZoneWindow()
     
     guard let items = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
@@ -305,23 +305,23 @@ class DraggableStatusBarView: NSView {
   
   override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
     NSLog("[S3Manager] DraggableStatusBarView draggingEntered")
-    appDelegate?.setIconState(.hover)
+    appDelegate?.setIconStateFromDrag(.hover)
     return .copy
   }
   
   override func draggingExited(_ sender: NSDraggingInfo?) {
     NSLog("[S3Manager] DraggableStatusBarView draggingExited")
-    appDelegate?.setIconState(.ready)
+    appDelegate?.setIconStateFromDrag(.ready)
   }
   
   override func draggingEnded(_ sender: NSDraggingInfo) {
     NSLog("[S3Manager] DraggableStatusBarView draggingEnded")
-    appDelegate?.setIconState(.normal)
+    appDelegate?.setIconStateFromDrag(.normal)
   }
   
   override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
     NSLog("[S3Manager] DraggableStatusBarView performDragOperation")
-    appDelegate?.setIconState(.normal)
+    appDelegate?.setIconStateFromDrag(.normal)
     
     guard let items = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
       NSLog("[S3Manager] DraggableStatusBarView: No files found in pasteboard")
@@ -351,8 +351,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
   private var isMenuBarEnabled: Bool = true  // 菜单栏图标是否启用
   private var isQuickUploadEnabled: Bool = true  // 快捷上传功能是否启用
   private var dragMonitorTimer: Timer?  // 拖拽监控定时器引用
-  private var uploadAnimationTimer: Timer?
-  private var uploadAnimationPhase: Bool = false
+  private var uploadSpinner: NSProgressIndicator?
   private var notificationAuthorizationRequested: Bool = false
   private var notificationAuthorized: Bool = false
 
@@ -766,30 +765,30 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
     }
   }
 
+  func setIconStateFromDrag(_ state: MenuBarIconState) {
+    if currentIconState == .uploading { return }
+    setIconState(state)
+  }
+
   private func startUploadAnimation() {
     updateUploadIcon()
-    uploadAnimationTimer?.invalidate()
-    uploadAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { [weak self] _ in
-      self?.uploadAnimationPhase.toggle()
-      self?.updateUploadIcon()
+    if uploadSpinner == nil {
+      setupUploadSpinner()
     }
-    RunLoop.main.add(uploadAnimationTimer!, forMode: .common)
+    layoutUploadSpinner()
+    uploadSpinner?.isHidden = false
+    uploadSpinner?.startAnimation(nil)
   }
 
   private func stopUploadAnimation() {
-    uploadAnimationTimer?.invalidate()
-    uploadAnimationTimer = nil
-    uploadAnimationPhase = false
+    uploadSpinner?.stopAnimation(nil)
+    uploadSpinner?.isHidden = true
   }
 
   private func updateUploadIcon() {
     guard let button = statusItem?.button else { return }
-    let symbolName = uploadAnimationPhase
-      ? MenuBarIconConfig.uploadingSymbolAlt
-      : MenuBarIconConfig.uploadingSymbol
-    let fallbackText = uploadAnimationPhase
-      ? MenuBarIconConfig.uploadingFallbackTextAlt
-      : MenuBarIconConfig.uploadingFallbackText
+    let symbolName = MenuBarIconConfig.uploadingSymbol
+    let fallbackText = MenuBarIconConfig.uploadingFallbackText
 
     if let image = createStatusImage(symbolName: symbolName) {
       button.image = image
@@ -798,6 +797,27 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
       button.image = fallbackStatusImage(for: .uploading, overrideText: fallbackText)
       button.title = ""
     }
+  }
+
+  private func setupUploadSpinner() {
+    guard let button = statusItem?.button else { return }
+    let spinner = NSProgressIndicator()
+    spinner.style = .spinning
+    spinner.controlSize = .small
+    spinner.isIndeterminate = true
+    spinner.isDisplayedWhenStopped = false
+    spinner.isHidden = true
+    button.addSubview(spinner)
+    uploadSpinner = spinner
+  }
+
+  private func layoutUploadSpinner() {
+    guard let button = statusItem?.button, let spinner = uploadSpinner else { return }
+    let size: CGFloat = 14
+    let x = (button.bounds.width - size) / 2
+    let y = (button.bounds.height - size) / 2
+    spinner.frame = NSRect(x: x, y: y, width: size, height: size)
+    spinner.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
   }
 
   private func requestNotificationAuthorizationIfNeeded(completion: @escaping (Bool) -> Void) {

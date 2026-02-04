@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart' as path;
+import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 
@@ -37,6 +38,8 @@ class UploadItem {
 class UploadManager extends ChangeNotifier {
   static FlutterLocalNotificationsPlugin? _notifications;
   static const int _notificationId = 2001;
+  static const String copyMarkdownActionId = 'copy_markdown';
+  static const String copyMarkdownCategoryId = 'upload_complete_markdown';
 
   static void initializeNotifications(FlutterLocalNotificationsPlugin plugin) {
     _notifications = plugin;
@@ -197,17 +200,33 @@ class UploadManager extends ChangeNotifier {
       _notifiedItemIds.add(item.id);
     }
 
-    final lastItem = _lastSuccessItem ?? completedItems.last;
-    final lastUrl = lastItem.resultUrl ?? _buildFileUrl(lastItem.targetKey);
-    Clipboard.setData(ClipboardData(text: lastUrl));
+    final urls = completedItems
+        .map((item) => item.resultUrl ?? _buildFileUrl(item.targetKey))
+        .toList();
+    Clipboard.setData(ClipboardData(text: urls.join('\n')));
 
     final count = completedItems.length;
-    final body = count <= 1 ? '文件已上传成功' : '已成功上传 $count 个文件';
-    final isImage = _isImageFile(lastItem.fileName);
-    final markdown = isImage ? '![image]($lastUrl)' : '';
-    final payload = json.encode({'markdown': markdown, 'url': lastUrl, 'isImage': isImage});
-    final details = _buildNotificationDetails();
-    _notifications!.show(_notificationId, '上传完成', body, details, payload: payload);
+    final body = count <= 1
+        ? LanguageManager.instance.getLocalized('upload_complete_body_single')
+        : LanguageManager.instance.getLocalized('upload_complete_body_multi').replaceFirst('%s', '$count');
+    final markdownLines = completedItems
+        .where((item) => _isImageFile(item.fileName))
+        .map((item) {
+          final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
+          return '![${item.fileName}]($url)';
+        })
+        .toList();
+    final markdown = markdownLines.join('\n\n');
+    final hasMarkdown = markdown.isNotEmpty;
+    final payload = json.encode({'markdown': markdown, 'hasMarkdown': hasMarkdown});
+    final details = _buildNotificationDetails(includeMarkdownAction: hasMarkdown && Platform.isDesktop);
+    _notifications!.show(
+      id: _notificationId,
+      title: LanguageManager.instance.getLocalized('upload_complete'),
+      body: body,
+      notificationDetails: details,
+      payload: payload,
+    );
   }
 
   bool _isImageFile(String fileName) {
@@ -229,15 +248,40 @@ class UploadManager extends ChangeNotifier {
     return imageExts.contains(ext);
   }
 
-  NotificationDetails _buildNotificationDetails() {
+  NotificationDetails _buildNotificationDetails({required bool includeMarkdownAction}) {
     if (Platform.isMacOS) {
-      const darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
-      return const NotificationDetails(macOS: darwinDetails);
+      final darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentSound: true,
+        categoryIdentifier: includeMarkdownAction ? copyMarkdownCategoryId : null,
+      );
+      return NotificationDetails(macOS: darwinDetails);
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      final actions = includeMarkdownAction
+          ? [
+              WindowsAction(
+                content: LanguageManager.instance.getLocalized('copy_markdown'),
+                arguments: copyMarkdownActionId,
+              ),
+            ]
+          : <WindowsAction>[];
+      final windowsDetails = WindowsNotificationDetails(actions: actions);
+      return NotificationDetails(windows: windowsDetails);
     }
 
     if (defaultTargetPlatform == TargetPlatform.linux) {
-      const linuxDetails = LinuxNotificationDetails();
-      return const NotificationDetails(linux: linuxDetails);
+      final actions = includeMarkdownAction
+          ? [
+              LinuxNotificationAction(
+                key: copyMarkdownActionId,
+                label: LanguageManager.instance.getLocalized('copy_markdown'),
+              ),
+            ]
+          : <LinuxNotificationAction>[];
+      final linuxDetails = LinuxNotificationDetails(actions: actions);
+      return NotificationDetails(linux: linuxDetails);
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -246,14 +290,14 @@ class UploadManager extends ChangeNotifier {
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      const androidDetails = AndroidNotificationDetails(
+      final androidDetails = AndroidNotificationDetails(
         'upload_complete',
-        'Upload Complete',
-        channelDescription: 'Notifications for completed uploads',
+        LanguageManager.instance.getLocalized('upload_complete_channel'),
+        channelDescription: LanguageManager.instance.getLocalized('upload_complete_channel_desc'),
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       );
-      return const NotificationDetails(android: androidDetails);
+      return NotificationDetails(android: androidDetails);
     }
 
     return const NotificationDetails();

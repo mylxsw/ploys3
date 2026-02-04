@@ -51,20 +51,37 @@ Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
 }
 
 Future<void> _initLocalNotifications() async {
-  const DarwinInitializationSettings darwinSettings = DarwinInitializationSettings(
+  final DarwinInitializationSettings darwinSettings = DarwinInitializationSettings(
     requestAlertPermission: true,
     requestBadgePermission: true,
     requestSoundPermission: true,
+    notificationCategories: <DarwinNotificationCategory>[
+      DarwinNotificationCategory(
+        UploadManager.copyMarkdownCategoryId,
+        actions: <DarwinNotificationAction>[
+          DarwinNotificationAction.plain(
+            UploadManager.copyMarkdownActionId,
+            LanguageManager.instance.getLocalized('copy_markdown'),
+          ),
+        ],
+      ),
+    ],
   );
   const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const WindowsInitializationSettings windowsSettings = WindowsInitializationSettings(
+    appName: 'Ploy S3',
+    appUserModelId: 'PloyS3.PloyS3',
+    guid: '54e1f5c6-1a3b-4d64-9a6b-7b8f47d59f1e',
+  );
   const LinuxInitializationSettings linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open');
-  const InitializationSettings initSettings = InitializationSettings(
+  final InitializationSettings initSettings = InitializationSettings(
     macOS: darwinSettings,
     android: androidSettings,
+    windows: windowsSettings,
     linux: linuxSettings,
   );
   await _localNotifications.initialize(
-    initSettings,
+    settings: initSettings,
     onDidReceiveNotificationResponse: _handleNotificationResponse,
   );
   UploadManager.initializeNotifications(_localNotifications);
@@ -180,13 +197,16 @@ void _setupMenuBarChannel() {
 }
 
 void _handleNotificationResponse(NotificationResponse response) {
+  if (response.actionId != UploadManager.copyMarkdownActionId) {
+    return;
+  }
   final payload = response.payload;
   if (payload == null || payload.isEmpty) return;
   try {
     final data = json.decode(payload) as Map<String, dynamic>;
     final markdown = data['markdown']?.toString() ?? '';
-    final isImage = data['isImage'] == true;
-    if (!Platform.isDesktop || !isImage) return;
+    final hasMarkdown = data['hasMarkdown'] == true;
+    if (!Platform.isDesktop || !hasMarkdown) return;
     if (markdown.isEmpty) return;
     Clipboard.setData(ClipboardData(text: markdown));
   } catch (_) {}

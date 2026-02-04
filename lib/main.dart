@@ -683,10 +683,10 @@ class _AppShellState extends State<AppShell> {
                   ),
                 ),
               if (!isSidebarExtended)
-                Positioned(
-                  top: 15,
-                  right: 30,
-                  child: Center(
+                Align(
+                  alignment: Alignment.center,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
                     child: Tooltip(
                       message: context.loc('add_new_server'),
                       child: Container(

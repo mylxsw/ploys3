@@ -52,7 +52,6 @@ class UploadManager extends ChangeNotifier {
 
   bool _isProcessing = false;
   final Set<String> _notifiedItemIds = {};
-  UploadItem? _lastSuccessItem;
 
   UploadManager({required StorageService service, String? cdnUrl, this.onUploadComplete})
     : _service = service,
@@ -154,7 +153,6 @@ class UploadManager extends ChangeNotifier {
           item.status = UploadStatus.success;
           item.progress = 1.0;
           item.resultUrl = _buildFileUrl(item.targetKey);
-          _lastSuccessItem = item;
           // Trigger callback to refresh file list
           onUploadComplete?.call();
         } catch (e) {
@@ -200,22 +198,17 @@ class UploadManager extends ChangeNotifier {
       _notifiedItemIds.add(item.id);
     }
 
-    final urls = completedItems
-        .map((item) => item.resultUrl ?? _buildFileUrl(item.targetKey))
-        .toList();
+    final urls = completedItems.map((item) => item.resultUrl ?? _buildFileUrl(item.targetKey)).toList();
     Clipboard.setData(ClipboardData(text: urls.join('\n')));
 
     final count = completedItems.length;
     final body = count <= 1
         ? LanguageManager.instance.getLocalized('upload_complete_body_single')
         : LanguageManager.instance.getLocalized('upload_complete_body_multi').replaceFirst('%s', '$count');
-    final markdownLines = completedItems
-        .where((item) => _isImageFile(item.fileName))
-        .map((item) {
-          final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
-          return '![${item.fileName}]($url)';
-        })
-        .toList();
+    final markdownLines = completedItems.where((item) => _isImageFile(item.fileName)).map((item) {
+      final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
+      return '![${item.fileName}]($url)';
+    }).toList();
     final markdown = markdownLines.join('\n\n');
     final hasMarkdown = markdown.isNotEmpty;
     final payload = json.encode({'markdown': markdown, 'hasMarkdown': hasMarkdown});
@@ -231,20 +224,7 @@ class UploadManager extends ChangeNotifier {
 
   bool _isImageFile(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
-    const imageExts = {
-      'jpg',
-      'jpeg',
-      'png',
-      'gif',
-      'bmp',
-      'webp',
-      'svg',
-      'tif',
-      'tiff',
-      'heic',
-      'heif',
-      'ico',
-    };
+    const imageExts = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tif', 'tiff', 'heic', 'heif', 'ico'};
     return imageExts.contains(ext);
   }
 

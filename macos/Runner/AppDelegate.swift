@@ -83,7 +83,7 @@ class DropZoneWindow: NSWindow {
   init() {
     // 创建一个紧凑的圆角矩形窗口
     super.init(
-      contentRect: NSRect(x: 0, y: 0, width: 160, height: 100),
+      contentRect: NSRect(x: 0, y: 0, width: 168, height: 80),
       styleMask: [.borderless],
       backing: .buffered,
       defer: false
@@ -97,7 +97,7 @@ class DropZoneWindow: NSWindow {
     self.ignoresMouseEvents = false
     
     // 设置内容视图
-    let dropView = DropZoneView(frame: NSRect(x: 0, y: 0, width: 160, height: 100))
+    let dropView = DropZoneView(frame: NSRect(x: 0, y: 0, width: 168, height: 80))
     dropView.dropWindow = self
     self.contentView = dropView
   }
@@ -115,6 +115,14 @@ class DropZoneWindow: NSWindow {
     let x = screenFrame.midX - windowWidth / 2
     let y = screenFrame.minY - self.frame.height - 5
     
+    self.setFrameOrigin(NSPoint(x: x, y: y))
+  }
+  
+  func positionNearTop(of screen: NSScreen, topOffset: CGFloat = 18) {
+    let screenFrame = screen.frame
+    let windowWidth = self.frame.width
+    let x = screenFrame.midX - windowWidth / 2
+    let y = screenFrame.maxY - self.frame.height - topOffset
     self.setFrameOrigin(NSPoint(x: x, y: y))
   }
 }
@@ -148,8 +156,8 @@ class DropZoneView: NSView {
   }
   
   private func drawDropZone(in bounds: NSRect) {
-    let cornerRadius: CGFloat = 12
-    let padding: CGFloat = 2
+    let cornerRadius: CGFloat = 10
+    let padding: CGFloat = 1.5
     let darkMode = isDarkMode
     
     // 外层背景
@@ -163,19 +171,19 @@ class DropZoneView: NSView {
     let contentColor: NSColor
     
     if isHovering {
-      bgColor = NSColor.systemBlue.withAlphaComponent(0.95)
-      borderColor = NSColor.white.withAlphaComponent(0.5)
-      dashColor = NSColor.white.withAlphaComponent(0.8)
+      bgColor = NSColor.systemBlue.withAlphaComponent(0.82)
+      borderColor = NSColor.white.withAlphaComponent(0.55)
+      dashColor = NSColor.white.withAlphaComponent(0.75)
       contentColor = NSColor.white
     } else if darkMode {
-      bgColor = NSColor(white: 0.15, alpha: 0.95)
-      borderColor = NSColor.white.withAlphaComponent(0.2)
-      dashColor = NSColor.white.withAlphaComponent(0.4)
+      bgColor = NSColor(white: 0.12, alpha: 0.72)
+      borderColor = NSColor.white.withAlphaComponent(0.18)
+      dashColor = NSColor.white.withAlphaComponent(0.38)
       contentColor = NSColor.white
     } else {
-      bgColor = NSColor(white: 0.98, alpha: 0.95)
-      borderColor = NSColor.black.withAlphaComponent(0.15)
-      dashColor = NSColor.black.withAlphaComponent(0.3)
+      bgColor = NSColor(white: 0.98, alpha: 0.72)
+      borderColor = NSColor.black.withAlphaComponent(0.12)
+      dashColor = NSColor.black.withAlphaComponent(0.28)
       contentColor = NSColor.black.withAlphaComponent(0.8)
     }
     
@@ -184,31 +192,42 @@ class DropZoneView: NSView {
     
     // 边框
     borderColor.setStroke()
-    outerPath.lineWidth = 1.5
+    outerPath.lineWidth = 1.25
     outerPath.stroke()
     
     // 虚线边框区域
-    let innerRect = outerRect.insetBy(dx: 10, dy: 10)
-    let innerPath = NSBezierPath(roundedRect: innerRect, xRadius: 8, yRadius: 8)
+    let innerRect = outerRect.insetBy(dx: 8, dy: 7)
+    let innerPath = NSBezierPath(roundedRect: innerRect, xRadius: 7, yRadius: 7)
     
     dashColor.setStroke()
-    innerPath.lineWidth = 2
-    innerPath.setLineDash([6, 4], count: 2, phase: 0)
+    innerPath.lineWidth = 1.6
+    innerPath.setLineDash([5, 4], count: 2, phase: 0)
     innerPath.stroke()
     
-    let centerX = bounds.midX
-    let centerY = bounds.midY
+    // 提示文字
+    let text = isHovering ? "Release to Upload" : "Drop Here"
+    let textAttributes: [NSAttributedString.Key: Any] = [
+      .font: NSFont.systemFont(ofSize: 11, weight: .medium),
+      .foregroundColor: contentColor.withAlphaComponent(0.9)
+    ]
+    let textSize = (text as NSString).size(withAttributes: textAttributes)
     
-    // 上传图标
+    let centerX = bounds.midX
+    let iconSize: CGFloat = 26
+    let textHeight = textSize.height
+    let gap: CGFloat = 6
+    let totalHeight = iconSize + gap + textHeight
+    let startY = innerRect.midY - totalHeight / 2
+    
+    // 上传图标（居中于虚线框内）
     if #available(macOS 11.0, *) {
       let symbolName = isHovering ? "arrow.up.circle.fill" : "icloud.and.arrow.up"
       if let icon = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
-        let config = NSImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+        let config = NSImage.SymbolConfiguration(pointSize: 23, weight: .medium)
         if let configuredIcon = icon.withSymbolConfiguration(config) {
-          let iconSize: CGFloat = 32
           let iconRect = NSRect(
             x: centerX - iconSize / 2,
-            y: centerY + 5,
+            y: startY + textHeight + gap,
             width: iconSize,
             height: iconSize
           )
@@ -223,16 +242,9 @@ class DropZoneView: NSView {
       }
     }
     
-    // 提示文字
-    let text = isHovering ? "Release to Upload" : "Drop Here"
-    let textAttributes: [NSAttributedString.Key: Any] = [
-      .font: NSFont.systemFont(ofSize: 12, weight: .medium),
-      .foregroundColor: contentColor.withAlphaComponent(0.9)
-    ]
-    let textSize = (text as NSString).size(withAttributes: textAttributes)
     let textRect = NSRect(
       x: centerX - textSize.width / 2,
-      y: centerY - 25,
+      y: startY,
       width: textSize.width,
       height: textSize.height
     )
@@ -737,7 +749,17 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate {
       dropZoneWindow?.appDelegate = self
     }
     
-    dropZoneWindow?.positionBelowStatusItem(statusItem)
+    let mouseLocation = NSEvent.mouseLocation
+    if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
+      let statusScreen = statusItem?.button?.window?.screen
+      if let statusScreen, statusScreen == screen {
+        dropZoneWindow?.positionBelowStatusItem(statusItem)
+      } else {
+        dropZoneWindow?.positionNearTop(of: screen)
+      }
+    } else {
+      dropZoneWindow?.positionBelowStatusItem(statusItem)
+    }
     dropZoneWindow?.orderFront(nil)
   }
   

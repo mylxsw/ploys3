@@ -16,9 +16,12 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
+
+final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
 /// 全局导航 key，用于从菜单栏打开设置页面
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -155,6 +158,36 @@ Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
   // 4. Use MenuBarIconController.setUploading() to show uploading state
   // 5. Use MenuBarIconController.resetToNormal() when done
   debugPrint('Files dropped on menu bar: $filePaths');
+  await _showUploadCompleteNotification(filePaths.length);
+}
+
+Future<void> _initLocalNotifications() async {
+  if (!Platform.isMacOS) return;
+  const DarwinInitializationSettings darwinSettings = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const InitializationSettings initSettings = InitializationSettings(
+    macOS: darwinSettings,
+  );
+  await _localNotifications.initialize(initSettings);
+}
+
+Future<void> _showUploadCompleteNotification(int fileCount) async {
+  if (!Platform.isMacOS) return;
+  const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentSound: true,
+  );
+  const NotificationDetails details = NotificationDetails(macOS: darwinDetails);
+  final String body = fileCount <= 1 ? '文件已上传成功' : '已成功上传 $fileCount 个文件';
+  await _localNotifications.show(
+    1001,
+    '上传完成',
+    body,
+    details,
+  );
 }
 
 void _setupMenuBarChannel() {
@@ -182,6 +215,7 @@ void main() async {
   
   // Setup menu bar channel for macOS
   _setupMenuBarChannel();
+  await _initLocalNotifications();
   
   // 初始化菜单栏设置（仅 macOS）
   if (Platform.isMacOS) {

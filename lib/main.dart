@@ -18,6 +18,8 @@ import 'package:ploys3/widgets/window_title_bar.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
@@ -150,6 +152,7 @@ class _AppShellState extends State<AppShell> {
   List<S3ServerConfig> _serverConfigs = [];
   S3ServerConfig? _selectedServerConfig;
   bool _isSidebarExtended = true;
+  bool _isImageBedDragging = false;
   double _sidebarWidth = 220.0;
   bool _isHoveringResizeHandle = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -787,6 +790,8 @@ class _AppShellState extends State<AppShell> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildImageBedModule(context),
+          const SizedBox(height: 16),
           Container(
             margin: const EdgeInsets.all(10),
             child: Text(
@@ -851,5 +856,137 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  Widget _buildImageBedModule(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = _isImageBedDragging
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outline.withValues(alpha: 0.35);
+    final backgroundColor = _isImageBedDragging
+        ? theme.colorScheme.primary.withValues(alpha: 0.08)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
+
+    final hintColor = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    Widget uploadArea = InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _pickAndUploadFiles,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(color: backgroundColor, borderRadius: BorderRadius.circular(12)),
+        child: CustomPaint(
+          foregroundPainter: _DashedBorderPainter(
+            color: borderColor,
+            radius: 12,
+            dashWidth: 6,
+            dashSpace: 4,
+            strokeWidth: 1,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Icon(Icons.cloud_upload_outlined, size: 28, color: hintColor),
+              const SizedBox(height: 8),
+              Text(
+                context.loc('image_bed_upload_hint'),
+                style: theme.textTheme.bodyMedium?.copyWith(color: hintColor),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (Platform.isDesktop) {
+      uploadArea = DropTarget(
+        onDragEntered: (details) {
+          setState(() {
+            _isImageBedDragging = true;
+          });
+        },
+        onDragExited: (details) {
+          setState(() {
+            _isImageBedDragging = false;
+          });
+        },
+        onDragDone: (details) async {
+          setState(() {
+            _isImageBedDragging = false;
+          });
+          final paths = details.files.map((file) => file.path).whereType<String>().toList();
+          if (paths.isEmpty) return;
+          await onMenuBarFilesDropped(paths);
+        },
+        child: uploadArea,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 6, bottom: 10),
+          child: Text(context.loc('image_bed'), style: theme.textTheme.bodyMedium?.copyWith(color: hintColor)),
+        ),
+        SizedBox(width: double.infinity, child: uploadArea),
+      ],
+    );
+  }
+
+  Future<void> _pickAndUploadFiles() async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null) return;
+    final paths = result.files.map((file) => file.path).whereType<String>().toList();
+    if (paths.isEmpty) return;
+    await onMenuBarFilesDropped(paths);
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+    required this.dashWidth,
+    required this.dashSpace,
+    required this.strokeWidth,
+  });
+
+  final Color color;
+  final double radius;
+  final double dashWidth;
+  final double dashSpace;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    final path = Path()..addRRect(rrect);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final length = dashWidth.clamp(0, metric.length - distance);
+        canvas.drawPath(metric.extractPath(distance, distance + length), paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
+    return color != oldDelegate.color ||
+        radius != oldDelegate.radius ||
+        dashWidth != oldDelegate.dashWidth ||
+        dashSpace != oldDelegate.dashSpace ||
+        strokeWidth != oldDelegate.strokeWidth;
   }
 }

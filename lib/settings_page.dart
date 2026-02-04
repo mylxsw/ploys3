@@ -9,6 +9,7 @@ import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
 import 'package:ploys3/core/platform.dart';
+import 'package:ploys3/image_bed_settings_page.dart';
 
 import 'package:ploys3/widgets/window_title_bar.dart';
 
@@ -313,6 +314,53 @@ class _SettingsPageState extends State<SettingsPage> {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: _updateMcpPort,
+        ),
+
+        const SizedBox(height: 24),
+
+        // 图床设置
+        Text(
+          context.loc('image_bed_settings'),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(height: 8),
+
+        AppComponents.card(
+          onTap: () {
+            Navigator.push(
+              context,
+              PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => const ImageBedSettingsPage()),
+            );
+          },
+          child: Row(
+            children: [
+              Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.loc('image_bed'),
+                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.loc('image_bed_settings_desc'),
+                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 24),

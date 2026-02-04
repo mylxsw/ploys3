@@ -15,6 +15,7 @@ class UploadItem {
   final String id;
   final String filePath;
   final String fileName;
+  final String originalFileName;
   final String targetBucket;
   final String targetKey;
   final String? cdnUrl; // For localized "Check" or "Copy Link"
@@ -27,6 +28,7 @@ class UploadItem {
   UploadItem({
     required this.filePath,
     required this.fileName,
+    required this.originalFileName,
     required this.targetBucket,
     required this.targetKey,
     this.cdnUrl,
@@ -72,14 +74,16 @@ class UploadManager extends ChangeNotifier {
     String Function(String path) nameResolver,
   ) {
     final addedItems = <UploadItem>[];
-    for (final path in filePaths) {
-      final fileName = nameResolver(path);
+    for (final filePath in filePaths) {
+      final originalName = path.basename(filePath);
+      final fileName = nameResolver(filePath);
       if (fileName.isEmpty) continue;
       final key = targetPrefix.isEmpty ? fileName : '$targetPrefix$fileName';
 
       final item = UploadItem(
-        filePath: path,
+        filePath: filePath,
         fileName: fileName,
+        originalFileName: originalName,
         targetBucket: _service.bucketName,
         targetKey: key,
         cdnUrl: _cdnUrl,
@@ -205,9 +209,10 @@ class UploadManager extends ChangeNotifier {
     final body = count <= 1
         ? LanguageManager.instance.getLocalized('upload_complete_body_single')
         : LanguageManager.instance.getLocalized('upload_complete_body_multi').replaceFirst('%s', '$count');
-    final markdownLines = completedItems.where((item) => _isImageFile(item.fileName)).map((item) {
+    final markdownLines = completedItems.where((item) => _isImageFile(item.originalFileName)).map((item) {
       final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
-      return '![${item.fileName}]($url)';
+      final altText = path.basenameWithoutExtension(item.originalFileName);
+      return '![${altText}]($url)';
     }).toList();
     final markdown = markdownLines.join('\n\n');
     final hasMarkdown = markdown.isNotEmpty;

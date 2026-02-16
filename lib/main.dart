@@ -1061,6 +1061,7 @@ class _AppShellState extends State<AppShell> {
         borderRadius: BorderRadius.circular(12),
         child: _selectedServerConfig != null
             ? S3BrowserPage(
+                key: ValueKey(_selectedServerConfig!.id),
                 serverConfig: _selectedServerConfig!,
                 onEditServer: () {
                   Navigator.push(

@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -53,6 +55,13 @@ class S3Item {
   }
 }
 
+class _CacheEntry {
+  final List<S3Item> items;
+  final DateTime updatedAt;
+
+  _CacheEntry({required this.items, required this.updatedAt});
+}
+
 class S3BrowserPage extends StatefulWidget {
   final S3ServerConfig serverConfig;
   final VoidCallback? onEditServer;
@@ -70,6 +79,11 @@ class S3BrowserPage extends StatefulWidget {
 }
 
 class _S3BrowserPageState extends State<S3BrowserPage> {
+  static const Duration _cacheTtl = Duration(minutes: 10);
+  static const int _maxCacheEntries = 300;
+  static final LinkedHashMap<String, _CacheEntry> _sharedCache =
+      LinkedHashMap<String, _CacheEntry>();
+
   late StorageService _storageService;
   List<S3Item> _objects = [];
   bool _isLoading = true;
@@ -79,12 +93,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   final List<String> _prefixHistory = [];
   bool _isDragging = false;
 
-  // Cache storage for file listings
-  final Map<String, List<S3Item>> _cache = {};
   bool _isRefreshing = false;
   UploadManager? _uploadManager;
   DownloadManager? _downloadManager;
   String? _initError;
+  int _serverGeneration = 0;
+  int _activeListRequestId = 0;
 
   // Multi-select state
   final Set<String> _selectedItems = {};
@@ -119,15 +133,64 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   void didUpdateWidget(S3BrowserPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.serverConfig.id != oldWidget.serverConfig.id) {
-      // Clear cache and reset state when switching servers
-      // Remove cache clearing to allow preserving cache across server switches
-      // _cache.clear();
-      _currentPrefix = '';
-      _prefixHistory.clear();
-      // _objects = []; // Let _listObjects handle this based on cache
-      // _isLoading = true; // Let _listObjects handle this based on cache
+      _serverGeneration++;
+      _activeListRequestId++;
+      // Reset state immediately to avoid stale server content flashing in UI.
+      setState(() {
+        _currentPrefix = '';
+        _prefixHistory.clear();
+        _selectedItems.clear();
+        _isSelectionMode = false;
+        _objects = [];
+        _isLoading = true;
+        _isRefreshing = false;
+      });
       _initializeService();
       _listObjects();
+    }
+  }
+
+  bool _isListRequestStillValid({
+    required int requestId,
+    required int requestGeneration,
+    required String requestServerId,
+    required String requestBucketName,
+    required String requestPrefix,
+  }) {
+    return mounted &&
+        requestId == _activeListRequestId &&
+        requestGeneration == _serverGeneration &&
+        widget.serverConfig.id == requestServerId &&
+        _storageService.bucketName == requestBucketName &&
+        _currentPrefix == requestPrefix;
+  }
+
+  List<S3Item>? _readCache(String cacheKey) {
+    final entry = _sharedCache[cacheKey];
+    if (entry == null) {
+      return null;
+    }
+
+    final expired = DateTime.now().difference(entry.updatedAt) > _cacheTtl;
+    if (expired) {
+      _sharedCache.remove(cacheKey);
+      return null;
+    }
+
+    // Touch to keep recently used entries.
+    _sharedCache.remove(cacheKey);
+    _sharedCache[cacheKey] = entry;
+    return List<S3Item>.from(entry.items);
+  }
+
+  void _writeCache(String cacheKey, List<S3Item> items) {
+    _sharedCache[cacheKey] = _CacheEntry(
+      items: List<S3Item>.from(items),
+      updatedAt: DateTime.now(),
+    );
+
+    while (_sharedCache.length > _maxCacheEntries) {
+      _sharedCache.remove(_sharedCache.keys.first);
     }
   }
 
@@ -178,8 +241,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   Future<void> _listObjects({String? prefix}) async {
     final effectivePrefix = prefix ?? _currentPrefix;
-    final cacheKey =
-        '${widget.serverConfig.id}:${_storageService.bucketName}:$effectivePrefix';
+    final requestId = ++_activeListRequestId;
+    final requestGeneration = _serverGeneration;
+    final requestServerId = widget.serverConfig.id;
+    final requestService = _storageService;
+    final requestBucketName = requestService.bucketName;
+    final cacheKey = '$requestServerId:$requestBucketName:$effectivePrefix';
 
     // If we're already on a different prefix, don't update UI for old requests
     if (effectivePrefix != _currentPrefix) {
@@ -190,18 +257,31 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
 
     // 1. Check cache
-    if (_cache.containsKey(cacheKey)) {
+    final cachedItems = _readCache(cacheKey);
+    if (cachedItems != null) {
       // If we have cache, show it immediately and do NOT show loading overlay
-      if (mounted) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
-          _objects = _cache[cacheKey]!;
+          _objects = cachedItems;
           _isLoading = false;
         });
       }
       debugPrint('Loaded from cache for prefix: $effectivePrefix');
     } else {
       // If no cache, clear objects and show loading overlay
-      if (mounted) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _objects = [];
           _isLoading = true;
@@ -214,15 +294,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     try {
       // Debug information
-      debugPrint(
-        'Listing objects from container: ${_storageService.bucketName}',
-      );
+      debugPrint('Listing objects from container: $requestBucketName');
       debugPrint('Using server type: ${widget.serverConfig.serverType}');
       debugPrint('Using prefix: $effectivePrefix');
 
-      final results = await _storageService.listObjects(
-        prefix: effectivePrefix,
-      );
+      final results = await requestService.listObjects(prefix: effectivePrefix);
 
       // Convert StorageItem to S3Item (or use StorageItem directly in UI later?)
       // For now, convert to S3Item to minimize UI changes.
@@ -268,10 +344,16 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       );
 
       // Update cache
-      _cache[cacheKey] = List.from(items);
+      _writeCache(cacheKey, items);
 
       // Update UI if we're still on the same page
-      if (mounted && _currentPrefix == effectivePrefix) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _objects = items;
           _isLoading = false;
@@ -282,10 +364,15 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         debugPrint(
           'Discarding result for $effectivePrefix (current: $_currentPrefix)',
         );
-        _isRefreshing = false;
       }
     } catch (e) {
-      if (mounted && _currentPrefix == effectivePrefix) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _isLoading = false;
           _isRefreshing = false;
@@ -335,7 +422,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   void _clearCache() {
     // Clear all cached data for this bucket
     final prefix = '${widget.serverConfig.id}:${_storageService.bucketName}:';
-    _cache.removeWhere((key, value) => key.startsWith(prefix));
+    _sharedCache.removeWhere((key, value) => key.startsWith(prefix));
     debugPrint('Cleared cache for container: ${_storageService.bucketName}');
   }
 

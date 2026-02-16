@@ -18,7 +18,8 @@ enum AppLanguage {
 /// 语言管理器
 class LanguageManager extends ChangeNotifier {
   static LanguageManager? _instance;
-  static LanguageManager get instance => _instance ??= LanguageManager._internal();
+  static LanguageManager get instance =>
+      _instance ??= LanguageManager._internal();
 
   LanguageManager._internal() {
     _loadLanguage();
@@ -110,6 +111,11 @@ class LanguageManager extends ChangeNotifier {
 
       // 配置页面
       'server_config': '服务器配置',
+      'server_type': '服务器类型',
+      'server_type_s3': 'S3 兼容',
+      'server_type_local': '本地文件系统',
+      'server_type_ssh': 'SSH (SFTP)',
+      'server_type_ftp': 'FTP',
       'name': '名称',
       'address': '地址',
       'bucket': '存储桶',
@@ -117,6 +123,18 @@ class LanguageManager extends ChangeNotifier {
       'secret_access_key': '秘密访问密钥',
       'region': '区域（可选）',
       'cdn_url': 'CDN URL（可选）',
+      'local_path': '本地目录',
+      'local_path_hint': '/Users/you/storage',
+      'server_host': '主机',
+      'server_host_hint': 'example.com',
+      'server_port': '端口',
+      'server_username': '用户名',
+      'server_username_hint': 'root',
+      'server_password': '密码',
+      'server_password_hint': '请输入密码',
+      'remote_path': '远程目录（可选）',
+      'remote_path_hint': '/data',
+      'pick_directory': '选择目录',
       'name_hint': '例如：我的个人 S3',
       'address_hint': 'https://s3.example.com',
       'bucket_hint': 'my-bucket',
@@ -125,6 +143,7 @@ class LanguageManager extends ChangeNotifier {
       'region_hint': 'auto（用于 R2）或 us-east-1',
       'cdn_hint': 'https://cdn.example.com',
       'validation_required': '请输入 %s',
+      'validation_invalid_number': '请输入有效数字',
 
       // 文件浏览器
       'back': '返回',
@@ -222,9 +241,11 @@ class LanguageManager extends ChangeNotifier {
 
       // 错误信息
       'connection_error': '连接错误',
-      'connection_failed_check': '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
+      'connection_failed_check':
+          '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
       'access_denied': '访问被拒绝',
-      'access_denied_check': '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
+      'access_denied_check':
+          '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
       'bucket_not_found': '存储桶未找到',
       'bucket_not_found_check': '存储桶未找到。请检查：\n1. 存储桶名称拼写是否正确\n2. 存储桶是否存在于您的账户中',
 
@@ -343,10 +364,12 @@ class LanguageManager extends ChangeNotifier {
       's3_manager': 'Ploy S3',
       'add_new_server': 'New Server',
       'no_server_selected': 'No Server Selected',
-      'select_server_to_start': 'Select a server from the list to start browsing',
+      'select_server_to_start':
+          'Select a server from the list to start browsing',
       'settings': 'Settings',
       'image_bed': 'Image Bed',
-      'image_bed_upload_hint': 'Click to select files or drag them here to upload',
+      'image_bed_upload_hint':
+          'Click to select files or drag them here to upload',
       'image_bed_settings': 'Image Bed Settings',
       'image_bed_settings_desc': 'Set default upload service and path',
       'image_bed_choose_server': 'Select S3 Service',
@@ -360,9 +383,11 @@ class LanguageManager extends ChangeNotifier {
       'image_bed_upload_dir_no_space': 'Directory must not contain spaces',
       'image_bed_upload_dir_invalid': 'Directory contains invalid characters',
       'image_bed_no_server_title': 'No S3 Service Found',
-      'image_bed_no_server_desc': 'Create an S3 service before configuring image bed settings.',
+      'image_bed_no_server_desc':
+          'Create an S3 service before configuring image bed settings.',
       'image_bed_add_server': 'Create S3 Service',
-      'image_bed_config_required': 'Image bed is not configured yet. Please set it up first.',
+      'image_bed_config_required':
+          'Image bed is not configured yet. Please set it up first.',
       'image_bed_go_config': 'Configure Now',
 
       // Server list
@@ -372,6 +397,11 @@ class LanguageManager extends ChangeNotifier {
 
       // Config page
       'server_config': 'Server Configuration',
+      'server_type': 'Server Type',
+      'server_type_s3': 'S3 Compatible',
+      'server_type_local': 'Local File System',
+      'server_type_ssh': 'SSH (SFTP)',
+      'server_type_ftp': 'FTP',
       'name': 'Name',
       'address': 'Address',
       'bucket': 'Bucket',
@@ -379,6 +409,18 @@ class LanguageManager extends ChangeNotifier {
       'secret_access_key': 'Secret Access Key',
       'region': 'Region (Optional)',
       'cdn_url': 'CDN URL (Optional)',
+      'local_path': 'Local Path',
+      'local_path_hint': '/Users/you/storage',
+      'server_host': 'Host',
+      'server_host_hint': 'example.com',
+      'server_port': 'Port',
+      'server_username': 'Username',
+      'server_username_hint': 'root',
+      'server_password': 'Password',
+      'server_password_hint': 'Enter password',
+      'remote_path': 'Remote Path (Optional)',
+      'remote_path_hint': '/data',
+      'pick_directory': 'Pick Directory',
       'name_hint': 'e.g., My Personal S3',
       'address_hint': 'https://s3.example.com',
       'bucket_hint': 'my-bucket',
@@ -387,6 +429,7 @@ class LanguageManager extends ChangeNotifier {
       'region_hint': 'auto (for R2) or us-east-1',
       'cdn_hint': 'https://cdn.example.com',
       'validation_required': 'Please enter %s',
+      'validation_invalid_number': 'Please enter a valid number',
 
       // File browser
       'back': 'Back',
@@ -471,7 +514,8 @@ class LanguageManager extends ChangeNotifier {
       'menubar_enable': 'Show Menu Bar Icon',
       'menubar_enable_desc': 'Display app icon in system menu bar',
       'quick_upload_enable': 'Enable Quick Upload',
-      'quick_upload_enable_desc': 'Show upload window when dragging files for quick upload',
+      'quick_upload_enable_desc':
+          'Show upload window when dragging files for quick upload',
       'mcp_settings': 'MCP Settings',
       'mcp_enable': 'Enable MCP Service',
       'mcp_enable_desc': 'Expose MCP tools over HTTP',
@@ -495,7 +539,8 @@ class LanguageManager extends ChangeNotifier {
 
       // Confirm dialogs
       'confirm_delete': 'Confirm Delete',
-      'confirm_delete_folder': 'Are you sure you want to delete folder "%s" and all its contents?',
+      'confirm_delete_folder':
+          'Are you sure you want to delete folder "%s" and all its contents?',
       'confirm_delete_file': 'Are you sure you want to delete file "%s"?',
       'cancel_btn': 'Cancel',
       'confirm_btn': 'Confirm',
@@ -515,7 +560,8 @@ class LanguageManager extends ChangeNotifier {
       'delete_object_confirm': 'Are you sure you want to delete "%s"?',
       'delete_folder_title': 'Delete Folder',
       'delete_folder_confirm': 'Are you sure you want to delete folder "%s"?',
-      'delete_folder_warning': 'Warning: This will delete all files and subfolders inside!',
+      'delete_folder_warning':
+          'Warning: This will delete all files and subfolders inside!',
       'delete_folder_success': 'Deleted folder "%s" and %s object(s)',
       'rename_success': 'Renamed %s to %s',
       'rename_error': 'Error renaming %s: %s',
@@ -533,7 +579,8 @@ class LanguageManager extends ChangeNotifier {
       'retry': 'Retry',
       'copy_link': 'Copy Link',
       'delete_server_title': 'Delete Server',
-      'delete_server_message': 'Are you sure you want to delete server "{name}"?',
+      'delete_server_message':
+          'Are you sure you want to delete server "{name}"?',
       'download_queue': 'Download Queue',
       'downloading_count': 'Downloading %s files...',
       'download_complete': 'Download Complete',
@@ -554,7 +601,8 @@ class LanguageManager extends ChangeNotifier {
       'list_buckets_success': '✓ List buckets succeeded',
       'found_buckets': 'Found %s bucket(s)',
       'list_buckets_failed': '✗ List buckets failed: %s',
-      'r2_list_buckets_note': '  This is normal for R2 - it doesn\'t support list_buckets operation',
+      'r2_list_buckets_note':
+          '  This is normal for R2 - it doesn\'t support list_buckets operation',
       'test_list_objects': '=== Testing List Objects ===',
       'list_objects_success': '✓ List objects succeeded',
       'found_objects': 'Found %s result(s)',
@@ -582,7 +630,8 @@ class LanguageManager extends ChangeNotifier {
       'batch_delete_result_success': 'Deleted %s files',
 
       // R2 Connection Helper
-      'r2_validation_endpoint': 'Endpoint does not appear to be a Cloudflare R2 URL',
+      'r2_validation_endpoint':
+          'Endpoint does not appear to be a Cloudflare R2 URL',
       'r2_validation_ak': 'Access Key ID is required',
       'r2_validation_sk': 'Secret Access Key is required',
       'r2_validation_bucket': 'Bucket name is required',

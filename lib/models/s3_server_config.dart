@@ -38,6 +38,7 @@ class S3ServerConfig {
   final int port;
   final String username;
   final String password;
+  final String privateKey;
   final String remotePath;
 
   S3ServerConfig({
@@ -55,6 +56,7 @@ class S3ServerConfig {
     this.port = 0,
     this.username = '',
     this.password = '',
+    this.privateKey = '',
     this.remotePath = '',
   });
 

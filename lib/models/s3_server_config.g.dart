@@ -22,6 +22,7 @@ S3ServerConfig _$S3ServerConfigFromJson(Map<String, dynamic> json) =>
       port: (json['port'] as num?)?.toInt() ?? 0,
       username: json['username'] as String? ?? '',
       password: json['password'] as String? ?? '',
+      privateKey: json['privateKey'] as String? ?? '',
       remotePath: json['remotePath'] as String? ?? '',
     );
 
@@ -41,5 +42,6 @@ Map<String, dynamic> _$S3ServerConfigToJson(S3ServerConfig instance) =>
       'port': instance.port,
       'username': instance.username,
       'password': instance.password,
+      'privateKey': instance.privateKey,
       'remotePath': instance.remotePath,
     };

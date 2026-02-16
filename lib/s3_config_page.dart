@@ -1,5 +1,7 @@
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:dartssh2/dartssh2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -39,7 +41,9 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
   final TextEditingController _portController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _privateKeyController = TextEditingController();
   final TextEditingController _remotePathController = TextEditingController();
+  bool _useKeyAuth = false;
 
   int _defaultPortForType(ServerType type) {
     return switch (type) {
@@ -73,6 +77,35 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
     setState(() {
       _localPathController.text = selected;
     });
+  }
+
+  Future<void> _pickPrivateKeyFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+    );
+    if (!mounted || result == null || result.files.isEmpty) return;
+
+    final filePath = result.files.single.path;
+    if (filePath == null) return;
+
+    try {
+      final content = await File(filePath).readAsString();
+      // Validate the key by attempting to parse it
+      SSHKeyPair.fromPem(content);
+      setState(() {
+        _privateKeyController.text = content;
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.loc('ssh_invalid_key_file')),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveConfig() async {
@@ -128,9 +161,14 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
               ? _usernameController.text.trim()
               : '',
           password:
-              _selectedServerType == ServerType.ssh ||
-                  _selectedServerType == ServerType.ftp
+              (_selectedServerType == ServerType.ssh ||
+                      _selectedServerType == ServerType.ftp) &&
+                  !_useKeyAuth
               ? _passwordController.text
+              : '',
+          privateKey:
+              _selectedServerType == ServerType.ssh && _useKeyAuth
+              ? _privateKeyController.text
               : '',
           remotePath:
               _selectedServerType == ServerType.ssh ||
@@ -195,9 +233,14 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
               ? _usernameController.text.trim()
               : '',
           password:
-              _selectedServerType == ServerType.ssh ||
-                  _selectedServerType == ServerType.ftp
+              (_selectedServerType == ServerType.ssh ||
+                      _selectedServerType == ServerType.ftp) &&
+                  !_useKeyAuth
               ? _passwordController.text
+              : '',
+          privateKey:
+              _selectedServerType == ServerType.ssh && _useKeyAuth
+              ? _privateKeyController.text
               : '',
           remotePath:
               _selectedServerType == ServerType.ssh ||
@@ -242,6 +285,8 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
           : '';
       _usernameController.text = widget.existingConfig!.username;
       _passwordController.text = widget.existingConfig!.password;
+      _privateKeyController.text = widget.existingConfig!.privateKey;
+      _useKeyAuth = widget.existingConfig!.privateKey.isNotEmpty;
       _remotePathController.text = widget.existingConfig!.remotePath;
       if (widget.existingConfig!.region != null) {
         _regionController.text = widget.existingConfig!.region!;
@@ -272,6 +317,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
     _portController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _privateKeyController.dispose();
     _remotePathController.dispose();
     super.dispose();
   }
@@ -451,12 +497,49 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
             _usernameController,
             context.loc('server_username_hint'),
           ),
-          _buildTextFormField(
-            context.loc('server_password'),
-            _passwordController,
-            context.loc('server_password_hint'),
-            obscureText: true,
-          ),
+          if (_selectedServerType == ServerType.ssh)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Row(
+                children: [
+                  Text(
+                    context.loc('ssh_auth_type'),
+                    style: const TextStyle(fontSize: AppFontSizes.md),
+                  ),
+                  const SizedBox(width: 16),
+                  ChoiceChip(
+                    label: Text(context.loc('ssh_auth_password')),
+                    selected: !_useKeyAuth,
+                    onSelected: (_) => setState(() => _useKeyAuth = false),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text(context.loc('ssh_auth_key')),
+                    selected: _useKeyAuth,
+                    onSelected: (_) => setState(() => _useKeyAuth = true),
+                  ),
+                ],
+              ),
+            ),
+          if (_selectedServerType == ServerType.ssh && _useKeyAuth)
+            _buildTextFormField(
+              context.loc('ssh_private_key'),
+              _privateKeyController,
+              context.loc('ssh_private_key_hint'),
+              maxLines: 2,
+              suffixIcon: IconButton(
+                onPressed: _pickPrivateKeyFile,
+                tooltip: context.loc('ssh_pick_key_file'),
+                icon: const Icon(Icons.file_open),
+              ),
+            )
+          else
+            _buildTextFormField(
+              context.loc('server_password'),
+              _passwordController,
+              context.loc('server_password_hint'),
+              obscureText: true,
+            ),
           _buildTextFormField(
             context.loc('remote_path'),
             _remotePathController,
@@ -475,6 +558,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
     bool isOptional = false,
     TextInputType? keyboardType,
     Widget? suffixIcon,
+    int? maxLines,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -482,6 +566,8 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
+        maxLines: maxLines ?? 1,
+        minLines: maxLines ?? 1,
         style: const TextStyle(fontSize: AppFontSizes.md),
         decoration: InputDecoration(
           labelText: label,
@@ -501,6 +587,7 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
             ),
             borderRadius: BorderRadius.circular(8),
           ),
+          alignLabelWithHint: (maxLines ?? 1) > 1,
           filled: true,
           fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           suffixIcon: suffixIcon,

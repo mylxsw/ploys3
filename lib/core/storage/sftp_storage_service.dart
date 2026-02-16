@@ -16,6 +16,7 @@ class SftpStorageService implements StorageService {
   int get _port => _config.port > 0 ? _config.port : 22;
   String get _username => _config.username.trim();
   String get _password => _config.password;
+  String get _privateKey => _config.privateKey;
   String get _rootPath => _normalizeRemotePath(_config.remotePath);
 
   String _normalizeRemotePath(String input) {
@@ -31,6 +32,7 @@ class SftpStorageService implements StorageService {
   String _normalizeKey(String key) {
     var value = key.trim().replaceAll('\\', '/');
     value = value.replaceAll(RegExp(r'^/+'), '');
+    if (value.isEmpty || value == '.') return '';
     return p.posix.normalize(value);
   }
 
@@ -39,7 +41,10 @@ class SftpStorageService implements StorageService {
     if (normalizedKey.isEmpty || normalizedKey == '.') {
       return _rootPath;
     }
-    if (_rootPath == '/' || _rootPath == '.') {
+    if (_rootPath == '.') {
+      return normalizedKey;
+    }
+    if (_rootPath == '/') {
       return p.posix.join('/', normalizedKey);
     }
     return p.posix.join(_rootPath, normalizedKey);
@@ -56,10 +61,15 @@ class SftpStorageService implements StorageService {
     }
 
     final socket = await SSHSocket.connect(_host, _port);
+
+    final useKeyAuth = _privateKey.trim().isNotEmpty;
     final client = SSHClient(
       socket,
       username: _username,
-      onPasswordRequest: () => _password,
+      onPasswordRequest: useKeyAuth ? null : () => _password,
+      identities: useKeyAuth
+          ? SSHKeyPair.fromPem(_privateKey)
+          : null,
       disableHostkeyVerification: true,
     );
 
@@ -126,29 +136,42 @@ class SftpStorageService implements StorageService {
       final normalizedPrefix = _normalizeKey(prefix ?? '');
       final target = _toRemotePath(normalizedPrefix);
       final names = await sftp.listdir(target);
-      return names
-          .where((item) => item.filename != '.' && item.filename != '..')
-          .map((item) {
-            final key = normalizedPrefix.isEmpty
+      final items = <StorageItem>[];
+      for (final item in names) {
+        if (item.filename == '.' || item.filename == '..') continue;
+        final key = normalizedPrefix.isEmpty
+            ? item.filename
+            : '$normalizedPrefix/${item.filename}';
+        var isDirectory =
+            item.attr.isDirectory || item.longname.startsWith('d');
+        // For symlinks, stat the target to check if it's a directory
+        if (!isDirectory && item.longname.startsWith('l')) {
+          try {
+            final childPath = target == '.'
                 ? item.filename
-                : '$normalizedPrefix/${item.filename}';
-            final isDirectory =
-                item.attr.isDirectory || item.longname.startsWith('d');
-            if (isDirectory) {
-              return StorageItem(
-                key: '$key/',
-                isDirectory: true,
-                lastModified: _mtimeToDateTime(item.attr.modifyTime),
-              );
-            }
-            return StorageItem(
-              key: key,
-              isDirectory: false,
-              size: item.attr.size,
-              lastModified: _mtimeToDateTime(item.attr.modifyTime),
-            );
-          })
-          .toList();
+                : p.posix.join(target, item.filename);
+            final stat = await sftp.stat(childPath);
+            isDirectory = stat.isDirectory;
+          } catch (_) {
+            // Broken symlink or permission error, treat as file
+          }
+        }
+        if (isDirectory) {
+          items.add(StorageItem(
+            key: '$key/',
+            isDirectory: true,
+            lastModified: _mtimeToDateTime(item.attr.modifyTime),
+          ));
+        } else {
+          items.add(StorageItem(
+            key: key,
+            isDirectory: false,
+            size: item.attr.size,
+            lastModified: _mtimeToDateTime(item.attr.modifyTime),
+          ));
+        }
+      }
+      return items;
     });
   }
 

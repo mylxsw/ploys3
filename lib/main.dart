@@ -662,21 +662,12 @@ class _AppShellState extends State<AppShell> {
                         left: 12,
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Theme.of(context).colorScheme.primary,
-                                    Theme.of(context).colorScheme.secondary,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.cloud_outlined,
-                                size: Platform.isMobile ? 40 : 20,
-                                color: Colors.white,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                'assets/app_icon.png',
+                                width: Platform.isMobile ? 60 : 40,
+                                height: Platform.isMobile ? 60 : 40,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -772,32 +763,21 @@ class _AppShellState extends State<AppShell> {
                   alignment: Alignment.center,
                   child: Tooltip(
                     message: context.loc('expand'),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.secondary,
-                          ],
-                        ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isSidebarExtended = true;
+                          });
+                        },
+                        child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          onTap: () {
-                            setState(() {
-                              _isSidebarExtended = true;
-                            });
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.cloud_outlined,
-                              size: 24,
-                              color: Colors.white,
-                            ),
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            width: 40,
+                            height: 40,
                           ),
                         ),
                       ),

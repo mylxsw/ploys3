@@ -354,6 +354,7 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
   private var uploadSpinner: NSProgressIndicator?
   private var notificationAuthorizationRequested: Bool = false
   private var notificationAuthorized: Bool = false
+  private var securityScopedResources: [String: URL] = [:]
 
   private func log(_ message: String) {
     NSLog("[S3Manager] \(message)")
@@ -638,6 +639,12 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
         } else {
           result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected title/body", details: nil))
         }
+      case "ensureFileAccess":
+        if let filePath = call.arguments as? String {
+          result(self?.ensureFileAccess(for: filePath) ?? false)
+        } else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected file path string", details: nil))
+        }
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -845,10 +852,37 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
       UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
   }
+
+  private func ensureFileAccess(for rawPath: String) -> Bool {
+    let path = (rawPath as NSString).standardizingPath
+
+    if securityScopedResources[path] != nil {
+      return true
+    }
+
+    let url = URL(fileURLWithPath: path)
+    if url.startAccessingSecurityScopedResource() {
+      securityScopedResources[path] = url
+      return true
+    }
+
+    // Some files are directly readable and do not require security-scoped access.
+    return FileManager.default.isReadableFile(atPath: path)
+  }
+
+  private func releaseAllSecurityScopedResources() {
+    for (_, url) in securityScopedResources {
+      url.stopAccessingSecurityScopedResource()
+    }
+    securityScopedResources.removeAll()
+  }
   
   func handleDroppedFiles(_ filePaths: [String]) {
     log("handleDroppedFiles called with: \(filePaths)")
     hideDropZoneWindow()
+    for path in filePaths {
+      _ = ensureFileAccess(for: path)
+    }
     if let channel = flutterChannel {
       log("Invoking Flutter method onFilesDropped")
       channel.invokeMethod("onFilesDropped", arguments: filePaths)
@@ -879,6 +913,11 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
   
   func hideDropZoneWindow() {
     dropZoneWindow?.orderOut(nil)
+  }
+
+  override func applicationWillTerminate(_ notification: Notification) {
+    releaseAllSecurityScopedResources()
+    super.applicationWillTerminate(notification)
   }
 
   private func setupStatusItem() {

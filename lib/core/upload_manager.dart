@@ -10,6 +10,8 @@ import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 
+const MethodChannel _macFileAccessChannel = MethodChannel('com.ploys3/menubar');
+
 enum UploadStatus { pending, uploading, success, failed }
 
 class UploadItem {
@@ -58,17 +60,27 @@ class UploadManager extends ChangeNotifier {
   bool _isProcessing = false;
   final Set<String> _notifiedItemIds = {};
 
-  UploadManager({required StorageService service, String? cdnUrl, this.onUploadComplete})
-    : _service = service,
-      _cdnUrl = cdnUrl;
+  UploadManager({
+    required StorageService service,
+    String? cdnUrl,
+    this.onUploadComplete,
+  }) : _service = service,
+       _cdnUrl = cdnUrl;
 
   List<UploadItem> get queue => List.unmodifiable(_queue);
 
-  bool get hasActiveUploads =>
-      _queue.any((item) => item.status == UploadStatus.uploading || item.status == UploadStatus.pending);
+  bool get hasActiveUploads => _queue.any(
+    (item) =>
+        item.status == UploadStatus.uploading ||
+        item.status == UploadStatus.pending,
+  );
 
   void addToQueue(List<String> filePaths, String targetPrefix) {
-    addToQueueWithNameResolver(filePaths, targetPrefix, (filePath) => path.basename(filePath));
+    addToQueueWithNameResolver(
+      filePaths,
+      targetPrefix,
+      (filePath) => path.basename(filePath),
+    );
   }
 
   List<UploadItem> addToQueueWithNameResolver(
@@ -138,7 +150,9 @@ class UploadManager extends ChangeNotifier {
     try {
       while (true) {
         // Find next pending item
-        final pendingItems = _queue.where((item) => item.status == UploadStatus.pending).toList();
+        final pendingItems = _queue
+            .where((item) => item.status == UploadStatus.pending)
+            .toList();
         if (pendingItems.isEmpty) break;
 
         final item = pendingItems.first;
@@ -148,6 +162,7 @@ class UploadManager extends ChangeNotifier {
         notifyListeners();
 
         try {
+          await _ensureFileReadable(item.filePath);
           final file = File(item.filePath);
           final stream = file.openRead().cast<Uint8List>();
           final size = await file.length();
@@ -198,7 +213,9 @@ class UploadManager extends ChangeNotifier {
   void _notifyIfBatchCompleted() {
     if (_notifications == null) return;
     final hasActive = _queue.any(
-      (item) => item.status == UploadStatus.pending || item.status == UploadStatus.uploading,
+      (item) =>
+          item.status == UploadStatus.pending ||
+          item.status == UploadStatus.uploading,
     );
     if (hasActive) return;
     _markInactive();
@@ -213,22 +230,34 @@ class UploadManager extends ChangeNotifier {
       _notifiedItemIds.add(item.id);
     }
 
-    final urls = completedItems.map((item) => item.resultUrl ?? _buildFileUrl(item.targetKey)).toList();
+    final urls = completedItems
+        .map((item) => item.resultUrl ?? _buildFileUrl(item.targetKey))
+        .toList();
     Clipboard.setData(ClipboardData(text: urls.join('\n')));
 
     final count = completedItems.length;
     final body = count <= 1
         ? LanguageManager.instance.getLocalized('upload_complete_body_single')
-        : LanguageManager.instance.getLocalized('upload_complete_body_multi').replaceFirst('%s', '$count');
-    final markdownLines = completedItems.where((item) => _isImageFile(item.originalFileName)).map((item) {
-      final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
-      final altText = path.basenameWithoutExtension(item.originalFileName);
-      return '![${altText}]($url)';
-    }).toList();
+        : LanguageManager.instance
+              .getLocalized('upload_complete_body_multi')
+              .replaceFirst('%s', '$count');
+    final markdownLines = completedItems
+        .where((item) => _isImageFile(item.originalFileName))
+        .map((item) {
+          final url = item.resultUrl ?? _buildFileUrl(item.targetKey);
+          final altText = path.basenameWithoutExtension(item.originalFileName);
+          return '![$altText]($url)';
+        })
+        .toList();
     final markdown = markdownLines.join('\n\n');
     final hasMarkdown = markdown.isNotEmpty;
-    final payload = json.encode({'markdown': markdown, 'hasMarkdown': hasMarkdown});
-    final details = _buildNotificationDetails(includeMarkdownAction: hasMarkdown && Platform.isDesktop);
+    final payload = json.encode({
+      'markdown': markdown,
+      'hasMarkdown': hasMarkdown,
+    });
+    final details = _buildNotificationDetails(
+      includeMarkdownAction: hasMarkdown && Platform.isDesktop,
+    );
     _notifications!.show(
       id: _notificationId,
       title: LanguageManager.instance.getLocalized('upload_complete'),
@@ -262,16 +291,33 @@ class UploadManager extends ChangeNotifier {
 
   bool _isImageFile(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
-    const imageExts = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tif', 'tiff', 'heic', 'heif', 'ico'};
+    const imageExts = {
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'webp',
+      'svg',
+      'tif',
+      'tiff',
+      'heic',
+      'heif',
+      'ico',
+    };
     return imageExts.contains(ext);
   }
 
-  NotificationDetails _buildNotificationDetails({required bool includeMarkdownAction}) {
+  NotificationDetails _buildNotificationDetails({
+    required bool includeMarkdownAction,
+  }) {
     if (Platform.isMacOS) {
       final darwinDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentSound: true,
-        categoryIdentifier: includeMarkdownAction ? copyMarkdownCategoryId : null,
+        categoryIdentifier: includeMarkdownAction
+            ? copyMarkdownCategoryId
+            : null,
       );
       return NotificationDetails(macOS: darwinDetails);
     }
@@ -303,7 +349,10 @@ class UploadManager extends ChangeNotifier {
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      const darwinDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentSound: true,
+      );
       return const NotificationDetails(iOS: darwinDetails);
     }
 
@@ -311,7 +360,9 @@ class UploadManager extends ChangeNotifier {
       final androidDetails = AndroidNotificationDetails(
         'upload_complete',
         LanguageManager.instance.getLocalized('upload_complete_channel'),
-        channelDescription: LanguageManager.instance.getLocalized('upload_complete_channel_desc'),
+        channelDescription: LanguageManager.instance.getLocalized(
+          'upload_complete_channel_desc',
+        ),
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       );
@@ -319,5 +370,23 @@ class UploadManager extends ChangeNotifier {
     }
 
     return const NotificationDetails();
+  }
+
+  Future<void> _ensureFileReadable(String filePath) async {
+    if (!Platform.isMacOS) return;
+    try {
+      final result = await _macFileAccessChannel.invokeMethod<dynamic>(
+        'ensureFileAccess',
+        filePath,
+      );
+      if (result is bool && result) return;
+      throw FileSystemException(
+        'Cannot access file in macOS sandbox',
+        filePath,
+      );
+    } on MissingPluginException {
+      // Fallback for environments where the macOS channel is unavailable.
+      return;
+    }
   }
 }

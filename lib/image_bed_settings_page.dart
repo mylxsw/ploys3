@@ -268,27 +268,26 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
           ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        RadioListTile<ImageBedNamingRule>(
-          value: ImageBedNamingRule.original,
+        RadioGroup<ImageBedNamingRule>(
           groupValue: _namingRule,
-          title: Text(context.loc('image_bed_keep_original')),
-          onChanged: (value) async {
+          onChanged: (value) {
             if (value == null) return;
             setState(() {
               _namingRule = value;
             });
           },
-        ),
-        RadioListTile<ImageBedNamingRule>(
-          value: ImageBedNamingRule.random,
-          groupValue: _namingRule,
-          title: Text(context.loc('image_bed_random_name')),
-          onChanged: (value) async {
-            if (value == null) return;
-            setState(() {
-              _namingRule = value;
-            });
-          },
+          child: Column(
+            children: [
+              RadioListTile<ImageBedNamingRule>(
+                value: ImageBedNamingRule.original,
+                title: Text(context.loc('image_bed_keep_original')),
+              ),
+              RadioListTile<ImageBedNamingRule>(
+                value: ImageBedNamingRule.random,
+                title: Text(context.loc('image_bed_random_name')),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -312,7 +311,7 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
       case ServerType.ssh:
       case ServerType.ftp:
         final host = server.host.isNotEmpty ? server.host : server.address;
-        return '${host}:${server.port > 0 ? server.port : ''}';
+        return '$host:${server.port > 0 ? server.port : ''}';
     }
   }
 

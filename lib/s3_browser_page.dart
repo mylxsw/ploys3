@@ -409,6 +409,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               '2. The bucket exists in your account';
         }
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -514,6 +515,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (newKey.isNotEmpty && newKey != oldKey) {
         try {
           await _storageService.renameObject(oldKey, newKey);
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(context.loc('rename_success', [oldKey, newKey])),
@@ -521,6 +523,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           );
           _listObjects();
         } catch (e) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -1056,6 +1059,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     if (mounted) {
       _clearCache();
       await _listObjects(prefix: _currentPrefix);
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1668,8 +1672,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   ),
             trailing: PopupMenuButton<String>(
               position: PopupMenuPosition.under,
-              onSelected: (value) =>
-                  _handleContextMenuSelection(context, value, object),
+              onSelected: (value) => _handleContextMenuSelection(value, object),
               itemBuilder: (context) => _buildContextMenuItems(object),
             ),
             onTap: () {
@@ -2238,11 +2241,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     ];
   }
 
-  void _handleContextMenuSelection(
-    BuildContext context,
-    String value,
-    S3Item object,
-  ) {
+  void _handleContextMenuSelection(String value, S3Item object) {
     if (value == 'download') {
       _downloadObject(object.key);
     } else if (value == 'copy') {
@@ -2301,7 +2300,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       items: items,
     ).then((value) {
       if (value != null) {
-        _handleContextMenuSelection(context, value, object);
+        _handleContextMenuSelection(value, object);
       }
     });
   }
@@ -2548,7 +2547,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _showCopyMenu() {
+  Future<void> _showCopyMenu() async {
     // Get the button's RenderBox using the GlobalKey
     final RenderObject? renderObject = _copyButtonKey.currentContext
         ?.findRenderObject();
@@ -2570,7 +2569,7 @@ class _PreviewContentState extends State<_PreviewContent> {
       Offset.zero & overlay.size,
     );
 
-    showMenu<String>(
+    final value = await showMenu<String>(
       context: context,
       position: position,
       items: [
@@ -2593,21 +2592,20 @@ class _PreviewContentState extends State<_PreviewContent> {
           ),
         ],
       ],
-    ).then((String? value) {
-      if (value == null) return;
+    );
+    if (!mounted || value == null) return;
 
-      final url = _getFileUrl();
+    final url = _getFileUrl();
 
-      switch (value) {
-        case 'url':
-          _copyToClipboard(url, context.loc('url_copied'));
-          break;
-        case 'markdown':
-          final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
-          _copyToClipboard(markdown, context.loc('markdown_copied'));
-          break;
-      }
-    });
+    switch (value) {
+      case 'url':
+        _copyToClipboard(url, context.loc('url_copied'));
+        break;
+      case 'markdown':
+        final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
+        _copyToClipboard(markdown, context.loc('markdown_copied'));
+        break;
+    }
   }
 
   Future<void> _handleDownload() async {

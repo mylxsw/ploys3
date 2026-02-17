@@ -352,18 +352,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final language in AppLanguage.values)
-                      RadioListTile<AppLanguage>(
-                        title: Text(language.displayName),
-                        value: language,
-                        groupValue: _selectedLanguage,
-                        onChanged: (value) {
-                          if (value != null) {
-                            _setLanguage(value);
-                            Navigator.pop(context);
-                          }
-                        },
+                    RadioGroup<AppLanguage>(
+                      groupValue: _selectedLanguage,
+                      onChanged: (value) {
+                        if (value == null) return;
+                        _setLanguage(value);
+                        Navigator.pop(context);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final language in AppLanguage.values)
+                            RadioListTile<AppLanguage>(
+                              title: Text(language.displayName),
+                              value: language,
+                            ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
                 actions: [

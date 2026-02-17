@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,9 +56,10 @@ Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
 Future<void> _initLocalNotifications() async {
   final DarwinInitializationSettings darwinSettings =
       DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
+        // Keep app startup independent from system permission prompt.
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
         notificationCategories: <DarwinNotificationCategory>[
           DarwinNotificationCategory(
             UploadManager.copyMarkdownCategoryId,
@@ -93,6 +95,22 @@ Future<void> _initLocalNotifications() async {
     onDidReceiveNotificationResponse: _handleNotificationResponse,
   );
   UploadManager.initializeNotifications(_localNotifications);
+  unawaited(_requestNotificationPermissionInBackground());
+}
+
+Future<void> _requestNotificationPermissionInBackground() async {
+  try {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (Platform.isMacOS) {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
+  } catch (_) {
+    // Ignore permission request errors to avoid affecting app startup.
+  }
 }
 
 class _ImageBedConfig {
@@ -261,7 +279,7 @@ void main() async {
 
   // Setup menu bar channel for macOS
   _setupMenuBarChannel();
-  await _initLocalNotifications();
+  unawaited(_initLocalNotifications());
 
   // 初始化菜单栏设置（仅 macOS）
   if (Platform.isMacOS) {

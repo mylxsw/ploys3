@@ -374,19 +374,28 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openSettingsPage() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            SettingsPage(onServerConfigsChanged: _loadConfigs),
+      ),
+    );
   }
 
   Future<void> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> serverConfigsStrings =
         prefs.getStringList('server_configs') ?? [];
+    final serverConfigs = serverConfigsStrings
+        .map((config) => S3ServerConfig.fromJson(json.decode(config)))
+        .toList();
+    final selectedId = _selectedServerConfig?.id;
     setState(() {
-      _serverConfigs = serverConfigsStrings
-          .map((config) => S3ServerConfig.fromJson(json.decode(config)))
-          .toList();
+      _serverConfigs = serverConfigs;
+      _selectedServerConfig = serverConfigs.cast<S3ServerConfig?>().firstWhere(
+        (server) => server?.id == selectedId,
+        orElse: () => null,
+      );
     });
   }
 
@@ -985,7 +994,9 @@ class _AppShellState extends State<AppShell> {
                           PageRouteBuilder(
                             pageBuilder:
                                 (context, animation, secondaryAnimation) =>
-                                    const SettingsPage(),
+                                    SettingsPage(
+                                      onServerConfigsChanged: _loadConfigs,
+                                    ),
                           ),
                         );
                       },

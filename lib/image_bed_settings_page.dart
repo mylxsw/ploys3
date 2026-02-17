@@ -218,6 +218,7 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _selectedServerId,
+          isExpanded: true,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
@@ -230,7 +231,23 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
               .map(
                 (server) => DropdownMenuItem<String>(
                   value: server.id,
-                  child: Text('${server.name} (${_serverLabel(server)})'),
+                  child: Text(
+                    '${server.name} (${_serverLabel(server)})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          selectedItemBuilder: (context) => _servers
+              .map(
+                (server) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${server.name} (${_serverLabel(server)})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),

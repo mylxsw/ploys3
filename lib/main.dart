@@ -1080,42 +1080,50 @@ class _AppShellState extends State<AppShell> {
               )
             : Stack(
                 children: [
-                  Scaffold(
-                    appBar: onOpenDrawer != null
-                        ? AppBar(
-                            title: Text(context.loc("s3_manager")),
-                            centerTitle: true,
-                            leading: IconButton(
-                              icon: const Icon(Icons.menu),
-                              onPressed: onOpenDrawer,
-                            ),
-                            elevation: 0,
-                            scrolledUnderElevation: 0,
-                            actions: [
-                              IconButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    PageRouteBuilder(
-                                      pageBuilder:
-                                          (
-                                            context,
-                                            animation,
-                                            secondaryAnimation,
-                                          ) => S3ConfigPage(
-                                            onSave: _loadConfigs,
-                                          ),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.add),
-                              ),
-                            ],
-                          )
-                        : null,
-                    body: _serverConfigs.isEmpty
-                        ? _buildEmptyState(context)
-                        : _buildServerPicker(context),
+                  Builder(
+                    builder: (context) {
+                      final appBarColor =
+                          Theme.of(context).appBarTheme.backgroundColor ??
+                          Theme.of(context).colorScheme.surface;
+                      return Scaffold(
+                        backgroundColor: appBarColor,
+                        appBar: onOpenDrawer != null
+                            ? AppBar(
+                                title: Text(context.loc("s3_manager")),
+                                centerTitle: true,
+                                leading: IconButton(
+                                  icon: const Icon(Icons.menu),
+                                  onPressed: onOpenDrawer,
+                                ),
+                                elevation: 0,
+                                scrolledUnderElevation: 0,
+                                actions: [
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          pageBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                              ) => S3ConfigPage(
+                                                onSave: _loadConfigs,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(Icons.add),
+                                  ),
+                                ],
+                              )
+                            : null,
+                        body: _serverConfigs.isEmpty
+                            ? _buildEmptyState(context)
+                            : _buildServerPicker(context),
+                      );
+                    },
                   ),
                   ValueListenableBuilder<UploadManager?>(
                     valueListenable: _imageBedUploadManagerNotifier,

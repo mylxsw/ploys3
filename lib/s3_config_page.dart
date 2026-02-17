@@ -386,12 +386,13 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
                                     value: ServerType.s3,
                                     child: Text(context.loc('server_type_s3')),
                                   ),
-                                  DropdownMenuItem(
-                                    value: ServerType.local,
-                                    child: Text(
-                                      context.loc('server_type_local'),
+                                  if (Platform.isMacOS || Platform.isLinux || Platform.isWindows)
+                                    DropdownMenuItem(
+                                      value: ServerType.local,
+                                      child: Text(
+                                        context.loc('server_type_local'),
+                                      ),
                                     ),
-                                  ),
                                   DropdownMenuItem(
                                     value: ServerType.ssh,
                                     child: Text(context.loc('server_type_ssh')),

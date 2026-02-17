@@ -82,6 +82,7 @@ Future<void> _initLocalNotifications() async {
     defaultActionName: 'Open',
   );
   final InitializationSettings initSettings = InitializationSettings(
+    iOS: darwinSettings,
     macOS: darwinSettings,
     android: androidSettings,
     windows: windowsSettings,

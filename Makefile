@@ -15,6 +15,7 @@ reset-flutter-environment:
 	flutter pub get
 
 install-macos: build-macos
+	trash /Applications/PloyS3.app || true
 	mv build/macos/Build/Products/Release/PloyS3.app /Applications
 
 build-macos:

@@ -1,15 +1,21 @@
+import 'dart:convert';
+
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:ploys3/core/design_system.dart';
 import 'package:ploys3/core/theme_manager.dart';
 import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
+import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ploys3/widgets/window_title_bar.dart';
 
@@ -26,6 +32,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _mcpEnabled = false;
   bool _menuBarEnabled = true;
   bool _quickUploadEnabled = true;
+  bool _isBackingUp = false;
+  bool _isRestoring = false;
   final TextEditingController _mcpHostController = TextEditingController();
   final TextEditingController _mcpPortController = TextEditingController();
 
@@ -55,7 +63,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _menuBarEnabled = enabled;
     });
   }
-  
+
   Future<void> _setQuickUploadEnabled(bool enabled) async {
     await MenuBarSettingsManager.instance.setQuickUploadEnabled(enabled);
     setState(() {
@@ -95,6 +103,136 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+      ),
+    );
+  }
+
+  Future<void> _backupServerConfigs() async {
+    if (_isBackingUp) return;
+    final backupSuccessMessage = context.loc('backup_success');
+    final backupFailedMessage = context.loc('backup_failed');
+
+    setState(() {
+      _isBackingUp = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serverConfigStrings = prefs.getStringList('server_configs') ?? [];
+      final serverConfigs = serverConfigStrings
+          .map((item) => S3ServerConfig.fromJson(json.decode(item)))
+          .map((config) => config.toJson())
+          .toList();
+      final backupPayload = <String, dynamic>{
+        'format': 'ploys3-server-config-backup',
+        'version': 1,
+        'exportedAt': DateTime.now().toUtc().toIso8601String(),
+        'serverConfigs': serverConfigs,
+      };
+      final bytes = Uint8List.fromList(
+        utf8.encode(const JsonEncoder.withIndent('  ').convert(backupPayload)),
+      );
+      final now = DateTime.now();
+      final fileName =
+          'ploys3-backup-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
+      await FileSaver.instance.saveAs(
+        name: fileName,
+        bytes: bytes,
+        ext: 'ploys3',
+        mimeType: MimeType.json,
+      );
+
+      _showMessage(backupSuccessMessage);
+    } catch (_) {
+      _showMessage(backupFailedMessage, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBackingUp = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _restoreServerConfigs() async {
+    if (_isRestoring) return;
+    final restoreSuccessMessage = context.loc('restore_success');
+    final restoreFailedMessage = context.loc('restore_failed');
+    final restoreInvalidExtensionMessage = context.loc(
+      'restore_invalid_extension',
+    );
+
+    setState(() {
+      _isRestoring = true;
+    });
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        withData: true,
+        type: FileType.custom,
+        allowedExtensions: const ['ploys3'],
+      );
+
+      if (result == null || result.files.isEmpty) {
+        return;
+      }
+
+      final pickedFile = result.files.single;
+      final fileName = pickedFile.name.toLowerCase();
+      if (!fileName.endsWith('.ploys3')) {
+        _showMessage(restoreInvalidExtensionMessage, isError: true);
+        return;
+      }
+
+      final bytes = pickedFile.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showMessage(restoreFailedMessage, isError: true);
+        return;
+      }
+
+      final content = utf8.decode(bytes);
+      final dynamic decoded = json.decode(content);
+
+      final List<dynamic> rawConfigs;
+      if (decoded is Map<String, dynamic> && decoded['serverConfigs'] is List) {
+        rawConfigs = decoded['serverConfigs'] as List<dynamic>;
+      } else if (decoded is List) {
+        rawConfigs = decoded;
+      } else {
+        throw const FormatException('Invalid backup format');
+      }
+
+      final normalizedConfigs = rawConfigs.map((item) {
+        if (item is! Map<String, dynamic>) {
+          throw const FormatException('Invalid server config');
+        }
+        final config = S3ServerConfig.fromJson(item);
+        return json.encode(config.toJson());
+      }).toList();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('server_configs', normalizedConfigs);
+      _showMessage(restoreSuccessMessage);
+    } catch (_) {
+      _showMessage(restoreFailedMessage, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRestoring = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _mcpHostController.dispose();
@@ -104,7 +242,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
+    final isMobilePlatform = const [
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+    ].contains(defaultTargetPlatform);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -128,7 +269,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 600),
-                      child: _buildSettingsContent(context, isMobile: isMobilePlatform),
+                      child: _buildSettingsContent(
+                        context,
+                        isMobile: isMobilePlatform,
+                      ),
                     ),
                   ),
                 ),
@@ -147,9 +291,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 外观设置
         Text(
           context.loc('appearance_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -158,7 +303,9 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Icons.dark_mode_outlined,
           title: context.loc('dark_mode'),
           subtitle: _getThemeModeDescription(),
-          trailing: isMobile ? _buildThemeDropdown(context) : _buildThemeSegmentedButton(),
+          trailing: isMobile
+              ? _buildThemeDropdown(context)
+              : _buildThemeSegmentedButton(),
           isMobile: isMobile,
         ),
 
@@ -167,9 +314,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 语言设置
         Text(
           context.loc('language_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -197,13 +345,21 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                   ],
                 ),
-                actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.loc('cancel_btn')))],
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(context.loc('cancel_btn')),
+                  ),
+                ],
               ),
             );
           },
           child: Row(
             children: [
-              Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.language,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -211,12 +367,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('language'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _selectedLanguage.displayName,
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -224,7 +386,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -236,9 +400,10 @@ class _SettingsPageState extends State<SettingsPage> {
         if (Platform.isMacOS) ...[
           Text(
             context.loc('menubar_settings'),
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -252,9 +417,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             isMobile: isMobile,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           Opacity(
             opacity: _menuBarEnabled ? 1.0 : 0.5,
             child: _buildSettingCard(
@@ -275,9 +440,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // MCP 设置
         Text(
           context.loc('mcp_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -321,9 +487,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 图床设置
         Text(
           context.loc('image_bed_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -331,12 +498,18 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: () {
             Navigator.push(
               context,
-              PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => const ImageBedSettingsPage()),
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const ImageBedSettingsPage(),
+              ),
             );
           },
           child: Row(
             children: [
-              Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.image_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -344,12 +517,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('image_bed'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       context.loc('image_bed_settings_desc'),
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -357,7 +536,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -365,12 +546,48 @@ class _SettingsPageState extends State<SettingsPage> {
 
         const SizedBox(height: 24),
 
+        Text(
+          context.loc('backup_restore_settings'),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        _buildSettingCard(
+          icon: Icons.backup_outlined,
+          title: context.loc('backup_config'),
+          subtitle: context.loc('backup_config_desc'),
+          trailing: FilledButton(
+            onPressed: _isBackingUp ? null : _backupServerConfigs,
+            child: Text(context.loc('backup_btn')),
+          ),
+          isMobile: isMobile,
+        ),
+
+        const SizedBox(height: 12),
+
+        _buildSettingCard(
+          icon: Icons.restore_page_outlined,
+          title: context.loc('restore_config'),
+          subtitle: context.loc('restore_config_desc'),
+          trailing: FilledButton(
+            onPressed: _isRestoring ? null : _restoreServerConfigs,
+            child: Text(context.loc('restore_btn')),
+          ),
+          isMobile: isMobile,
+        ),
+
+        const SizedBox(height: 24),
+
         // 关于
         Text(
           context.loc('about'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -385,7 +602,10 @@ class _SettingsPageState extends State<SettingsPage> {
           },
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.info_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -393,12 +613,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('version'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '1.0.0',
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -406,7 +632,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -426,9 +654,18 @@ class _SettingsPageState extends State<SettingsPage> {
           }
         },
         items: [
-          DropdownMenuItem(value: AppThemeMode.light, child: Text(context.loc('theme_light'))),
-          DropdownMenuItem(value: AppThemeMode.system, child: Text(context.loc('theme_system'))),
-          DropdownMenuItem(value: AppThemeMode.dark, child: Text(context.loc('theme_dark'))),
+          DropdownMenuItem(
+            value: AppThemeMode.light,
+            child: Text(context.loc('theme_light')),
+          ),
+          DropdownMenuItem(
+            value: AppThemeMode.system,
+            child: Text(context.loc('theme_system')),
+          ),
+          DropdownMenuItem(
+            value: AppThemeMode.dark,
+            child: Text(context.loc('theme_dark')),
+          ),
         ],
       ),
     );
@@ -440,9 +677,21 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         SegmentedButton<AppThemeMode>(
           segments: [
-            ButtonSegment(value: AppThemeMode.light, label: Text(context.loc('theme_light')), icon: Icon(Icons.light_mode)),
-            ButtonSegment(value: AppThemeMode.system, label: Text(context.loc('theme_system')), icon: Icon(Icons.auto_mode)),
-            ButtonSegment(value: AppThemeMode.dark, label: Text(context.loc('theme_dark')), icon: Icon(Icons.dark_mode)),
+            ButtonSegment(
+              value: AppThemeMode.light,
+              label: Text(context.loc('theme_light')),
+              icon: Icon(Icons.light_mode),
+            ),
+            ButtonSegment(
+              value: AppThemeMode.system,
+              label: Text(context.loc('theme_system')),
+              icon: Icon(Icons.auto_mode),
+            ),
+            ButtonSegment(
+              value: AppThemeMode.dark,
+              label: Text(context.loc('theme_dark')),
+              icon: Icon(Icons.dark_mode),
+            ),
           ],
           selected: {_themeMode},
           onSelectionChanged: (Set<AppThemeMode> newSelection) {
@@ -471,10 +720,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                      child: Icon(
+                        icon,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -483,14 +738,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: AppFontSizes.lg,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
                             style: TextStyle(
                               fontSize: AppFontSizes.md,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ],
@@ -506,10 +766,16 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                  child: Icon(
+                    icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -518,7 +784,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: AppFontSizes.lg,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -556,7 +825,10 @@ class _SettingsPageState extends State<SettingsPage> {
         hintText: subtitle,
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
       ),
       onChanged: onChanged,
     );
@@ -570,10 +842,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                      child: Icon(
+                        icon,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -582,14 +860,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: AppFontSizes.lg,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
                             style: TextStyle(
                               fontSize: AppFontSizes.md,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ],
@@ -605,10 +888,16 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                  child: Icon(
+                    icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -617,7 +906,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: AppFontSizes.lg,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(

@@ -255,6 +255,9 @@ class LanguageManager extends ChangeNotifier {
       'restore_success': '恢复成功',
       'restore_failed': '恢复失败，请检查备份文件',
       'restore_invalid_extension': '请选择 .ploys3 备份文件',
+      'restore_confirm_title': '确认恢复配置',
+      'restore_confirm_desc': '恢复会清空当前所有服务器配置，并使用备份文件内容覆盖，是否继续？',
+      'restore_confirm_btn': '确认恢复',
       'about': '关于',
       'version': '版本',
 
@@ -564,6 +567,10 @@ class LanguageManager extends ChangeNotifier {
       'restore_success': 'Restore completed',
       'restore_failed': 'Restore failed, please check the backup file',
       'restore_invalid_extension': 'Please select a .ploys3 backup file',
+      'restore_confirm_title': 'Confirm restore',
+      'restore_confirm_desc':
+          'Restoring will clear all current server configs and replace them with the backup content. Continue?',
+      'restore_confirm_btn': 'Restore now',
       'about': 'About',
       'version': 'Version',
 

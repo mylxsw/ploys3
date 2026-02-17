@@ -20,7 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.onServerConfigsChanged});
+
+  final VoidCallback? onServerConfigsChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -169,6 +171,24 @@ class _SettingsPageState extends State<SettingsPage> {
     final restoreInvalidExtensionMessage = context.loc(
       'restore_invalid_extension',
     );
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.loc('restore_confirm_title')),
+        content: Text(context.loc('restore_confirm_desc')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.loc('restore_confirm_btn')),
+          ),
+        ],
+      ),
+    );
+    if (shouldContinue != true) return;
 
     setState(() {
       _isRestoring = true;
@@ -221,6 +241,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('server_configs', normalizedConfigs);
+      widget.onServerConfigsChanged?.call();
       _showMessage(restoreSuccessMessage);
     } catch (_) {
       _showMessage(restoreFailedMessage, isError: true);
@@ -331,18 +352,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final language in AppLanguage.values)
-                      RadioListTile<AppLanguage>(
-                        title: Text(language.displayName),
-                        value: language,
-                        groupValue: _selectedLanguage,
-                        onChanged: (value) {
-                          if (value != null) {
-                            _setLanguage(value);
-                            Navigator.pop(context);
-                          }
-                        },
+                    RadioGroup<AppLanguage>(
+                      groupValue: _selectedLanguage,
+                      onChanged: (value) {
+                        if (value == null) return;
+                        _setLanguage(value);
+                        Navigator.pop(context);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final language in AppLanguage.values)
+                            RadioListTile<AppLanguage>(
+                              title: Text(language.displayName),
+                              value: language,
+                            ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
                 actions: [

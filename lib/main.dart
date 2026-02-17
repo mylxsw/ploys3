@@ -374,19 +374,28 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openSettingsPage() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            SettingsPage(onServerConfigsChanged: _loadConfigs),
+      ),
+    );
   }
 
   Future<void> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> serverConfigsStrings =
         prefs.getStringList('server_configs') ?? [];
+    final serverConfigs = serverConfigsStrings
+        .map((config) => S3ServerConfig.fromJson(json.decode(config)))
+        .toList();
+    final selectedId = _selectedServerConfig?.id;
     setState(() {
-      _serverConfigs = serverConfigsStrings
-          .map((config) => S3ServerConfig.fromJson(json.decode(config)))
-          .toList();
+      _serverConfigs = serverConfigs;
+      _selectedServerConfig = serverConfigs.cast<S3ServerConfig?>().firstWhere(
+        (server) => server?.id == selectedId,
+        orElse: () => null,
+      );
     });
   }
 
@@ -408,12 +417,11 @@ class _AppShellState extends State<AppShell> {
     await _loadConfigs();
   }
 
-  void _showServerContextMenu(
-    BuildContext context,
+  Future<void> _showServerContextMenu(
     Offset position,
     S3ServerConfig server,
-  ) {
-    showMenu<String>(
+  ) async {
+    final value = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
         position.dx,
@@ -450,38 +458,38 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       ],
-    ).then((value) {
-      if (value == 'edit') {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                S3ConfigPage(existingConfig: server, onSave: _loadConfigs),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  const curve = Curves.easeOutQuart;
-                  var scaleAnimation = Tween(
-                    begin: 0.0,
-                    end: 1.0,
-                  ).animate(CurvedAnimation(parent: animation, curve: curve));
-                  var fadeAnimation = Tween(
-                    begin: 0.0,
-                    end: 1.0,
-                  ).animate(CurvedAnimation(parent: animation, curve: curve));
-                  return ScaleTransition(
-                    scale: scaleAnimation,
-                    alignment: Alignment.topLeft,
-                    child: FadeTransition(opacity: fadeAnimation, child: child),
-                  );
-                },
-            transitionDuration: const Duration(milliseconds: 400),
-            reverseTransitionDuration: const Duration(milliseconds: 300),
-          ),
-        );
-      } else if (value == 'delete') {
-        _showDeleteConfirmation(context, server);
-      }
-    });
+    );
+    if (!mounted) return;
+
+    if (value == 'edit') {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              S3ConfigPage(existingConfig: server, onSave: _loadConfigs),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const curve = Curves.easeOutQuart;
+            var scaleAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: curve));
+            var fadeAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: curve));
+            return ScaleTransition(
+              scale: scaleAnimation,
+              alignment: Alignment.topLeft,
+              child: FadeTransition(opacity: fadeAnimation, child: child),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 400),
+          reverseTransitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    } else if (value == 'delete') {
+      _showDeleteConfirmation(context, server);
+    }
   }
 
   void _showDeleteConfirmation(BuildContext context, S3ServerConfig server) {
@@ -928,18 +936,10 @@ class _AppShellState extends State<AppShell> {
                 ),
                 label: GestureDetector(
                   onSecondaryTapDown: (details) {
-                    _showServerContextMenu(
-                      context,
-                      details.globalPosition,
-                      server,
-                    );
+                    _showServerContextMenu(details.globalPosition, server);
                   },
                   onLongPressStart: (details) {
-                    _showServerContextMenu(
-                      context,
-                      details.globalPosition,
-                      server,
-                    );
+                    _showServerContextMenu(details.globalPosition, server);
                   },
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -985,7 +985,9 @@ class _AppShellState extends State<AppShell> {
                           PageRouteBuilder(
                             pageBuilder:
                                 (context, animation, secondaryAnimation) =>
-                                    const SettingsPage(),
+                                    SettingsPage(
+                                      onServerConfigsChanged: _loadConfigs,
+                                    ),
                           ),
                         );
                       },

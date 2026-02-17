@@ -71,7 +71,7 @@ Future<void> _initLocalNotifications() async {
         ],
       );
   const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/launcher_icon');
   const WindowsInitializationSettings windowsSettings =
       WindowsInitializationSettings(
         appName: 'Ploy S3',

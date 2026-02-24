@@ -18,7 +18,8 @@ enum AppLanguage {
 /// 语言管理器
 class LanguageManager extends ChangeNotifier {
   static LanguageManager? _instance;
-  static LanguageManager get instance => _instance ??= LanguageManager._internal();
+  static LanguageManager get instance =>
+      _instance ??= LanguageManager._internal();
 
   LanguageManager._internal() {
     _loadLanguage();
@@ -110,6 +111,11 @@ class LanguageManager extends ChangeNotifier {
 
       // 配置页面
       'server_config': '服务器配置',
+      'server_type': '服务器类型',
+      'server_type_s3': 'S3 兼容',
+      'server_type_local': '本地文件系统',
+      'server_type_ssh': 'SSH (SFTP)',
+      'server_type_ftp': 'FTP',
       'name': '名称',
       'address': '地址',
       'bucket': '存储桶',
@@ -117,6 +123,25 @@ class LanguageManager extends ChangeNotifier {
       'secret_access_key': '秘密访问密钥',
       'region': '区域（可选）',
       'cdn_url': 'CDN URL（可选）',
+      'local_path': '本地目录',
+      'local_path_hint': '/Users/you/storage',
+      'server_host': '主机',
+      'server_host_hint': 'example.com',
+      'server_port': '端口',
+      'server_username': '用户名',
+      'server_username_hint': 'root',
+      'server_password': '密码',
+      'server_password_hint': '请输入密码',
+      'ssh_auth_type': '认证方式',
+      'ssh_auth_password': '密码',
+      'ssh_auth_key': '密钥',
+      'ssh_private_key': '私钥',
+      'ssh_private_key_hint': '粘贴 PEM 格式私钥内容',
+      'ssh_pick_key_file': '选择密钥文件',
+      'ssh_invalid_key_file': '无效的密钥文件，请选择合法的 PEM 格式私钥',
+      'remote_path': '远程目录（可选）',
+      'remote_path_hint': '/data',
+      'pick_directory': '选择目录',
       'name_hint': '例如：我的个人 S3',
       'address_hint': 'https://s3.example.com',
       'bucket_hint': 'my-bucket',
@@ -125,6 +150,7 @@ class LanguageManager extends ChangeNotifier {
       'region_hint': 'auto（用于 R2）或 us-east-1',
       'cdn_hint': 'https://cdn.example.com',
       'validation_required': '请输入 %s',
+      'validation_invalid_number': '请输入有效数字',
 
       // 文件浏览器
       'back': '返回',
@@ -217,14 +243,31 @@ class LanguageManager extends ChangeNotifier {
       'mcp_host_desc': '服务监听 IP 或主机名',
       'mcp_port': '监听端口',
       'mcp_port_desc': '服务监听的端口号',
+      'backup_restore_settings': '备份与恢复',
+      'backup_config': '备份服务器配置',
+      'backup_config_desc': '导出当前服务器配置为备份文件（.ploys3）',
+      'backup_btn': '备份',
+      'backup_success': '备份成功',
+      'backup_failed': '备份失败，请稍后重试',
+      'restore_config': '恢复服务器配置',
+      'restore_config_desc': '从备份文件恢复并覆盖当前服务器配置',
+      'restore_btn': '恢复',
+      'restore_success': '恢复成功',
+      'restore_failed': '恢复失败，请检查备份文件',
+      'restore_invalid_extension': '请选择 .ploys3 备份文件',
+      'restore_confirm_title': '确认恢复配置',
+      'restore_confirm_desc': '恢复会清空当前所有服务器配置，并使用备份文件内容覆盖，是否继续？',
+      'restore_confirm_btn': '确认恢复',
       'about': '关于',
       'version': '版本',
 
       // 错误信息
       'connection_error': '连接错误',
-      'connection_failed_check': '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
+      'connection_failed_check':
+          '连接失败。请检查：\n1. 网络连接\n2. 端点 URL 是否正确\n3. 访问凭据是否有效\n4. 对于 R2：确保存储桶存在且可访问',
       'access_denied': '访问被拒绝',
-      'access_denied_check': '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
+      'access_denied_check':
+          '访问被拒绝。请检查：\n1. 访问密钥和密钥是否正确\n2. 存储桶是否存在\n3. 您是否具有存储桶的列表权限',
       'bucket_not_found': '存储桶未找到',
       'bucket_not_found_check': '存储桶未找到。请检查：\n1. 存储桶名称拼写是否正确\n2. 存储桶是否存在于您的账户中',
 
@@ -343,10 +386,12 @@ class LanguageManager extends ChangeNotifier {
       's3_manager': 'Ploy S3',
       'add_new_server': 'New Server',
       'no_server_selected': 'No Server Selected',
-      'select_server_to_start': 'Select a server from the list to start browsing',
+      'select_server_to_start':
+          'Select a server from the list to start browsing',
       'settings': 'Settings',
       'image_bed': 'Image Bed',
-      'image_bed_upload_hint': 'Click to select files or drag them here to upload',
+      'image_bed_upload_hint':
+          'Click to select files or drag them here to upload',
       'image_bed_settings': 'Image Bed Settings',
       'image_bed_settings_desc': 'Set default upload service and path',
       'image_bed_choose_server': 'Select S3 Service',
@@ -360,9 +405,11 @@ class LanguageManager extends ChangeNotifier {
       'image_bed_upload_dir_no_space': 'Directory must not contain spaces',
       'image_bed_upload_dir_invalid': 'Directory contains invalid characters',
       'image_bed_no_server_title': 'No S3 Service Found',
-      'image_bed_no_server_desc': 'Create an S3 service before configuring image bed settings.',
+      'image_bed_no_server_desc':
+          'Create an S3 service before configuring image bed settings.',
       'image_bed_add_server': 'Create S3 Service',
-      'image_bed_config_required': 'Image bed is not configured yet. Please set it up first.',
+      'image_bed_config_required':
+          'Image bed is not configured yet. Please set it up first.',
       'image_bed_go_config': 'Configure Now',
 
       // Server list
@@ -372,6 +419,11 @@ class LanguageManager extends ChangeNotifier {
 
       // Config page
       'server_config': 'Server Configuration',
+      'server_type': 'Server Type',
+      'server_type_s3': 'S3 Compatible',
+      'server_type_local': 'Local File System',
+      'server_type_ssh': 'SSH (SFTP)',
+      'server_type_ftp': 'FTP',
       'name': 'Name',
       'address': 'Address',
       'bucket': 'Bucket',
@@ -379,6 +431,26 @@ class LanguageManager extends ChangeNotifier {
       'secret_access_key': 'Secret Access Key',
       'region': 'Region (Optional)',
       'cdn_url': 'CDN URL (Optional)',
+      'local_path': 'Local Path',
+      'local_path_hint': '/Users/you/storage',
+      'server_host': 'Host',
+      'server_host_hint': 'example.com',
+      'server_port': 'Port',
+      'server_username': 'Username',
+      'server_username_hint': 'root',
+      'server_password': 'Password',
+      'server_password_hint': 'Enter password',
+      'ssh_auth_type': 'Auth Type',
+      'ssh_auth_password': 'Password',
+      'ssh_auth_key': 'Key',
+      'ssh_private_key': 'Private Key',
+      'ssh_private_key_hint': 'Paste PEM format private key',
+      'ssh_pick_key_file': 'Pick key file',
+      'ssh_invalid_key_file':
+          'Invalid key file, please select a valid PEM private key',
+      'remote_path': 'Remote Path (Optional)',
+      'remote_path_hint': '/data',
+      'pick_directory': 'Pick Directory',
       'name_hint': 'e.g., My Personal S3',
       'address_hint': 'https://s3.example.com',
       'bucket_hint': 'my-bucket',
@@ -387,6 +459,7 @@ class LanguageManager extends ChangeNotifier {
       'region_hint': 'auto (for R2) or us-east-1',
       'cdn_hint': 'https://cdn.example.com',
       'validation_required': 'Please enter %s',
+      'validation_invalid_number': 'Please enter a valid number',
 
       // File browser
       'back': 'Back',
@@ -471,7 +544,8 @@ class LanguageManager extends ChangeNotifier {
       'menubar_enable': 'Show Menu Bar Icon',
       'menubar_enable_desc': 'Display app icon in system menu bar',
       'quick_upload_enable': 'Enable Quick Upload',
-      'quick_upload_enable_desc': 'Show upload window when dragging files for quick upload',
+      'quick_upload_enable_desc':
+          'Show upload window when dragging files for quick upload',
       'mcp_settings': 'MCP Settings',
       'mcp_enable': 'Enable MCP Service',
       'mcp_enable_desc': 'Expose MCP tools over HTTP',
@@ -479,6 +553,24 @@ class LanguageManager extends ChangeNotifier {
       'mcp_host_desc': 'IP address or hostname to bind',
       'mcp_port': 'Listen Port',
       'mcp_port_desc': 'Port for the MCP service',
+      'backup_restore_settings': 'Backup and Restore',
+      'backup_config': 'Backup Server Configs',
+      'backup_config_desc':
+          'Export current server configs as a backup file (.ploys3)',
+      'backup_btn': 'Backup',
+      'backup_success': 'Backup completed',
+      'backup_failed': 'Backup failed, please try again',
+      'restore_config': 'Restore Server Configs',
+      'restore_config_desc':
+          'Restore and replace current server configs from a backup file',
+      'restore_btn': 'Restore',
+      'restore_success': 'Restore completed',
+      'restore_failed': 'Restore failed, please check the backup file',
+      'restore_invalid_extension': 'Please select a .ploys3 backup file',
+      'restore_confirm_title': 'Confirm restore',
+      'restore_confirm_desc':
+          'Restoring will clear all current server configs and replace them with the backup content. Continue?',
+      'restore_confirm_btn': 'Restore now',
       'about': 'About',
       'version': 'Version',
 
@@ -495,7 +587,8 @@ class LanguageManager extends ChangeNotifier {
 
       // Confirm dialogs
       'confirm_delete': 'Confirm Delete',
-      'confirm_delete_folder': 'Are you sure you want to delete folder "%s" and all its contents?',
+      'confirm_delete_folder':
+          'Are you sure you want to delete folder "%s" and all its contents?',
       'confirm_delete_file': 'Are you sure you want to delete file "%s"?',
       'cancel_btn': 'Cancel',
       'confirm_btn': 'Confirm',
@@ -515,7 +608,8 @@ class LanguageManager extends ChangeNotifier {
       'delete_object_confirm': 'Are you sure you want to delete "%s"?',
       'delete_folder_title': 'Delete Folder',
       'delete_folder_confirm': 'Are you sure you want to delete folder "%s"?',
-      'delete_folder_warning': 'Warning: This will delete all files and subfolders inside!',
+      'delete_folder_warning':
+          'Warning: This will delete all files and subfolders inside!',
       'delete_folder_success': 'Deleted folder "%s" and %s object(s)',
       'rename_success': 'Renamed %s to %s',
       'rename_error': 'Error renaming %s: %s',
@@ -533,7 +627,8 @@ class LanguageManager extends ChangeNotifier {
       'retry': 'Retry',
       'copy_link': 'Copy Link',
       'delete_server_title': 'Delete Server',
-      'delete_server_message': 'Are you sure you want to delete server "{name}"?',
+      'delete_server_message':
+          'Are you sure you want to delete server "{name}"?',
       'download_queue': 'Download Queue',
       'downloading_count': 'Downloading %s files...',
       'download_complete': 'Download Complete',
@@ -554,7 +649,8 @@ class LanguageManager extends ChangeNotifier {
       'list_buckets_success': '✓ List buckets succeeded',
       'found_buckets': 'Found %s bucket(s)',
       'list_buckets_failed': '✗ List buckets failed: %s',
-      'r2_list_buckets_note': '  This is normal for R2 - it doesn\'t support list_buckets operation',
+      'r2_list_buckets_note':
+          '  This is normal for R2 - it doesn\'t support list_buckets operation',
       'test_list_objects': '=== Testing List Objects ===',
       'list_objects_success': '✓ List objects succeeded',
       'found_objects': 'Found %s result(s)',
@@ -582,7 +678,8 @@ class LanguageManager extends ChangeNotifier {
       'batch_delete_result_success': 'Deleted %s files',
 
       // R2 Connection Helper
-      'r2_validation_endpoint': 'Endpoint does not appear to be a Cloudflare R2 URL',
+      'r2_validation_endpoint':
+          'Endpoint does not appear to be a Cloudflare R2 URL',
       'r2_validation_ak': 'Access Key ID is required',
       'r2_validation_sk': 'Secret Access Key is required',
       'r2_validation_bucket': 'Bucket name is required',

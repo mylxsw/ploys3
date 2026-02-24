@@ -1,20 +1,28 @@
+import 'dart:convert';
+
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:ploys3/core/design_system.dart';
 import 'package:ploys3/core/theme_manager.dart';
 import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
+import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ploys3/widgets/window_title_bar.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.onServerConfigsChanged});
+
+  final VoidCallback? onServerConfigsChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -26,6 +34,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _mcpEnabled = false;
   bool _menuBarEnabled = true;
   bool _quickUploadEnabled = true;
+  bool _isBackingUp = false;
+  bool _isRestoring = false;
   final TextEditingController _mcpHostController = TextEditingController();
   final TextEditingController _mcpPortController = TextEditingController();
 
@@ -55,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _menuBarEnabled = enabled;
     });
   }
-  
+
   Future<void> _setQuickUploadEnabled(bool enabled) async {
     await MenuBarSettingsManager.instance.setQuickUploadEnabled(enabled);
     setState(() {
@@ -92,6 +102,135 @@ class _SettingsPageState extends State<SettingsPage> {
     final port = int.tryParse(value);
     if (port != null) {
       await McpSettingsManager.instance.setPort(port);
+    }
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+      ),
+    );
+  }
+
+  Future<void> _backupServerConfigs() async {
+    if (_isBackingUp) return;
+    final backupSuccessMessage = context.loc('backup_success');
+    final backupFailedMessage = context.loc('backup_failed');
+
+    setState(() {
+      _isBackingUp = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serverConfigStrings = prefs.getStringList('server_configs') ?? [];
+      final serverConfigs = serverConfigStrings
+          .map((item) => S3ServerConfig.fromJson(json.decode(item)))
+          .map((config) => config.toJson())
+          .toList();
+      final backupPayload = <String, dynamic>{
+        'format': 'ploys3-server-config-backup',
+        'version': 1,
+        'exportedAt': DateTime.now().toUtc().toIso8601String(),
+        'serverConfigs': serverConfigs,
+      };
+      final bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(backupPayload)));
+      final now = DateTime.now();
+      final fileName =
+          'ploys3-backup-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
+      await FileSaver.instance.saveAs(name: fileName, bytes: bytes, ext: 'ploys3', mimeType: MimeType.json);
+
+      _showMessage(backupSuccessMessage);
+    } catch (_) {
+      _showMessage(backupFailedMessage, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBackingUp = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _restoreServerConfigs() async {
+    if (_isRestoring) return;
+    final restoreSuccessMessage = context.loc('restore_success');
+    final restoreFailedMessage = context.loc('restore_failed');
+    final restoreInvalidExtensionMessage = context.loc('restore_invalid_extension');
+    final result = await FilePicker.platform.pickFiles(allowMultiple: false, withData: true, type: FileType.any);
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final pickedFile = result.files.single;
+    final fileName = pickedFile.name.toLowerCase();
+    if (!fileName.endsWith('.ploys3')) {
+      _showMessage(restoreInvalidExtensionMessage, isError: true);
+      return;
+    }
+
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.loc('restore_confirm_title')),
+        content: Text(context.loc('restore_confirm_desc')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.loc('restore_confirm_btn'))),
+        ],
+      ),
+    );
+    if (shouldContinue != true) return;
+
+    setState(() {
+      _isRestoring = true;
+    });
+
+    try {
+      final bytes = pickedFile.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showMessage(restoreFailedMessage, isError: true);
+        return;
+      }
+
+      final content = utf8.decode(bytes);
+      final dynamic decoded = json.decode(content);
+
+      final List<dynamic> rawConfigs;
+      if (decoded is Map<String, dynamic> && decoded['serverConfigs'] is List) {
+        rawConfigs = decoded['serverConfigs'] as List<dynamic>;
+      } else if (decoded is List) {
+        rawConfigs = decoded;
+      } else {
+        throw const FormatException('Invalid backup format');
+      }
+
+      final normalizedConfigs = rawConfigs.map((item) {
+        if (item is! Map<String, dynamic>) {
+          throw const FormatException('Invalid server config');
+        }
+        final config = S3ServerConfig.fromJson(item);
+        return json.encode(config.toJson());
+      }).toList();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('server_configs', normalizedConfigs);
+      widget.onServerConfigsChanged?.call();
+      _showMessage(restoreSuccessMessage);
+    } catch (_) {
+      _showMessage(restoreFailedMessage, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRestoring = false;
+        });
+      }
     }
   }
 
@@ -183,18 +322,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final language in AppLanguage.values)
-                      RadioListTile<AppLanguage>(
-                        title: Text(language.displayName),
-                        value: language,
-                        groupValue: _selectedLanguage,
-                        onChanged: (value) {
-                          if (value != null) {
-                            _setLanguage(value);
-                            Navigator.pop(context);
-                          }
-                        },
+                    RadioGroup<AppLanguage>(
+                      groupValue: _selectedLanguage,
+                      onChanged: (value) {
+                        if (value == null) return;
+                        _setLanguage(value);
+                        Navigator.pop(context);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final language in AppLanguage.values)
+                            RadioListTile<AppLanguage>(title: Text(language.displayName), value: language),
+                        ],
                       ),
+                    ),
                   ],
                 ),
                 actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.loc('cancel_btn')))],
@@ -236,9 +378,10 @@ class _SettingsPageState extends State<SettingsPage> {
         if (Platform.isMacOS) ...[
           Text(
             context.loc('menubar_settings'),
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -246,15 +389,12 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.menu,
             title: context.loc('menubar_enable'),
             subtitle: context.loc('menubar_enable_desc'),
-            trailing: Switch.adaptive(
-              value: _menuBarEnabled,
-              onChanged: _setMenuBarEnabled,
-            ),
+            trailing: Switch.adaptive(value: _menuBarEnabled, onChanged: _setMenuBarEnabled),
             isMobile: isMobile,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           Opacity(
             opacity: _menuBarEnabled ? 1.0 : 0.5,
             child: _buildSettingCard(
@@ -285,10 +425,7 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Icons.hub_outlined,
           title: context.loc('mcp_enable'),
           subtitle: context.loc('mcp_enable_desc'),
-          trailing: Switch.adaptive(
-            value: _mcpEnabled,
-            onChanged: _setMcpEnabled,
-          ),
+          trailing: Switch.adaptive(value: _mcpEnabled, onChanged: _setMcpEnabled),
           isMobile: isMobile,
         ),
 
@@ -361,6 +498,40 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+        ),
+
+        const SizedBox(height: 24),
+
+        Text(
+          context.loc('backup_restore_settings'),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(height: 8),
+
+        _buildSettingCard(
+          icon: Icons.backup_outlined,
+          title: context.loc('backup_config'),
+          subtitle: context.loc('backup_config_desc'),
+          trailing: FilledButton(
+            onPressed: _isBackingUp ? null : _backupServerConfigs,
+            child: Text(context.loc('backup_btn')),
+          ),
+          isMobile: isMobile,
+        ),
+
+        const SizedBox(height: 12),
+
+        _buildSettingCard(
+          icon: Icons.restore_page_outlined,
+          title: context.loc('restore_config'),
+          subtitle: context.loc('restore_config_desc'),
+          trailing: FilledButton(
+            onPressed: _isRestoring ? null : _restoreServerConfigs,
+            child: Text(context.loc('restore_btn')),
+          ),
+          isMobile: isMobile,
         ),
 
         const SizedBox(height: 24),
@@ -440,9 +611,21 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         SegmentedButton<AppThemeMode>(
           segments: [
-            ButtonSegment(value: AppThemeMode.light, label: Text(context.loc('theme_light')), icon: Icon(Icons.light_mode)),
-            ButtonSegment(value: AppThemeMode.system, label: Text(context.loc('theme_system')), icon: Icon(Icons.auto_mode)),
-            ButtonSegment(value: AppThemeMode.dark, label: Text(context.loc('theme_dark')), icon: Icon(Icons.dark_mode)),
+            ButtonSegment(
+              value: AppThemeMode.light,
+              label: Text(context.loc('theme_light')),
+              icon: Icon(Icons.light_mode),
+            ),
+            ButtonSegment(
+              value: AppThemeMode.system,
+              label: Text(context.loc('theme_system')),
+              icon: Icon(Icons.auto_mode),
+            ),
+            ButtonSegment(
+              value: AppThemeMode.dark,
+              label: Text(context.loc('theme_dark')),
+              icon: Icon(Icons.dark_mode),
+            ),
           ],
           selected: {_themeMode},
           onSelectionChanged: (Set<AppThemeMode> newSelection) {

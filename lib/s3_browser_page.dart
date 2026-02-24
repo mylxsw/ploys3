@@ -1,9 +1,12 @@
+import 'dart:collection';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:ploys3/core/platform.dart';
 
 import 'package:ploys3/models/s3_server_config.dart';
@@ -16,7 +19,7 @@ import 'package:ploys3/core/upload_manager.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
 import 'package:ploys3/widgets/download_queue_ui.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
-import 'package:ploys3/core/storage/s3_storage_service.dart';
+import 'package:ploys3/core/storage/storage_service_factory.dart';
 import 'package:ploys3/core/design_system.dart';
 
 String _basenameFromKey(String key) {
@@ -41,6 +44,21 @@ class S3Item {
   }
 }
 
+class _CacheEntry {
+  final List<S3Item> items;
+  final DateTime updatedAt;
+
+  _CacheEntry({required this.items, required this.updatedAt});
+}
+
+class _MobilePathEntry {
+  final String label;
+  final String prefix;
+  final int depth;
+
+  _MobilePathEntry({required this.label, required this.prefix, required this.depth});
+}
+
 class S3BrowserPage extends StatefulWidget {
   final S3ServerConfig serverConfig;
   final VoidCallback? onEditServer;
@@ -53,6 +71,10 @@ class S3BrowserPage extends StatefulWidget {
 }
 
 class _S3BrowserPageState extends State<S3BrowserPage> {
+  static const Duration _cacheTtl = Duration(minutes: 10);
+  static const int _maxCacheEntries = 300;
+  static final LinkedHashMap<String, _CacheEntry> _sharedCache = LinkedHashMap<String, _CacheEntry>();
+
   late StorageService _storageService;
   List<S3Item> _objects = [];
   bool _isLoading = true;
@@ -62,12 +84,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   final List<String> _prefixHistory = [];
   bool _isDragging = false;
 
-  // Cache storage for file listings
-  final Map<String, List<S3Item>> _cache = {};
   bool _isRefreshing = false;
   UploadManager? _uploadManager;
   DownloadManager? _downloadManager;
   String? _initError;
+  int _serverGeneration = 0;
+  int _activeListRequestId = 0;
 
   // Multi-select state
   final Set<String> _selectedItems = {};
@@ -102,15 +124,61 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   void didUpdateWidget(S3BrowserPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.serverConfig.id != oldWidget.serverConfig.id) {
-      // Clear cache and reset state when switching servers
-      // Remove cache clearing to allow preserving cache across server switches
-      // _cache.clear();
-      _currentPrefix = '';
-      _prefixHistory.clear();
-      // _objects = []; // Let _listObjects handle this based on cache
-      // _isLoading = true; // Let _listObjects handle this based on cache
+      _serverGeneration++;
+      _activeListRequestId++;
+      // Reset state immediately to avoid stale server content flashing in UI.
+      setState(() {
+        _currentPrefix = '';
+        _prefixHistory.clear();
+        _selectedItems.clear();
+        _isSelectionMode = false;
+        _objects = [];
+        _isLoading = true;
+        _isRefreshing = false;
+      });
       _initializeService();
       _listObjects();
+    }
+  }
+
+  bool _isListRequestStillValid({
+    required int requestId,
+    required int requestGeneration,
+    required String requestServerId,
+    required String requestBucketName,
+    required String requestPrefix,
+  }) {
+    return mounted &&
+        requestId == _activeListRequestId &&
+        requestGeneration == _serverGeneration &&
+        widget.serverConfig.id == requestServerId &&
+        _storageService.bucketName == requestBucketName &&
+        _currentPrefix == requestPrefix;
+  }
+
+  List<S3Item>? _readCache(String cacheKey) {
+    final entry = _sharedCache[cacheKey];
+    if (entry == null) {
+      return null;
+    }
+
+    final expired = DateTime.now().difference(entry.updatedAt) > _cacheTtl;
+    if (expired) {
+      _sharedCache.remove(cacheKey);
+      return null;
+    }
+
+    // Touch to keep recently used entries.
+    _sharedCache.remove(cacheKey);
+    _sharedCache[cacheKey] = entry;
+    return List<S3Item>.from(entry.items);
+  }
+
+  void _writeCache(String cacheKey, List<S3Item> items) {
+    _sharedCache[cacheKey] = _CacheEntry(items: List<S3Item>.from(items), updatedAt: DateTime.now());
+
+    while (_sharedCache.length > _maxCacheEntries) {
+      _sharedCache.remove(_sharedCache.keys.first);
     }
   }
 
@@ -129,7 +197,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       // The current S3StorageService constructor encapsulates creation.
       // Let's create it.
 
-      _storageService = S3StorageService(widget.serverConfig);
+      _storageService = StorageServiceFactory.create(widget.serverConfig);
 
       // Initialize UploadManager
       _uploadManager = UploadManager(
@@ -161,7 +229,12 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   Future<void> _listObjects({String? prefix}) async {
     final effectivePrefix = prefix ?? _currentPrefix;
-    final cacheKey = '${widget.serverConfig.id}:${widget.serverConfig.bucket}:$effectivePrefix';
+    final requestId = ++_activeListRequestId;
+    final requestGeneration = _serverGeneration;
+    final requestServerId = widget.serverConfig.id;
+    final requestService = _storageService;
+    final requestBucketName = requestService.bucketName;
+    final cacheKey = '$requestServerId:$requestBucketName:$effectivePrefix';
 
     // If we're already on a different prefix, don't update UI for old requests
     if (effectivePrefix != _currentPrefix) {
@@ -170,18 +243,31 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
 
     // 1. Check cache
-    if (_cache.containsKey(cacheKey)) {
+    final cachedItems = _readCache(cacheKey);
+    if (cachedItems != null) {
       // If we have cache, show it immediately and do NOT show loading overlay
-      if (mounted) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
-          _objects = _cache[cacheKey]!;
+          _objects = cachedItems;
           _isLoading = false;
         });
       }
       debugPrint('Loaded from cache for prefix: $effectivePrefix');
     } else {
       // If no cache, clear objects and show loading overlay
-      if (mounted) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _objects = [];
           _isLoading = true;
@@ -194,11 +280,11 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     try {
       // Debug information
-      debugPrint('Listing objects from bucket: ${widget.serverConfig.bucket}');
-      debugPrint('Using endpoint: ${widget.serverConfig.address}');
+      debugPrint('Listing objects from container: $requestBucketName');
+      debugPrint('Using server type: ${widget.serverConfig.serverType}');
       debugPrint('Using prefix: $effectivePrefix');
 
-      final results = await _storageService.listObjects(prefix: effectivePrefix);
+      final results = await requestService.listObjects(prefix: effectivePrefix);
 
       // Convert StorageItem to S3Item (or use StorageItem directly in UI later?)
       // For now, convert to S3Item to minimize UI changes.
@@ -242,10 +328,16 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       debugPrint('✓ Found ${items.length} items (${directories.length} dirs, ${files.length} files)');
 
       // Update cache
-      _cache[cacheKey] = List.from(items);
+      _writeCache(cacheKey, items);
 
       // Update UI if we're still on the same page
-      if (mounted && _currentPrefix == effectivePrefix) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _objects = items;
           _isLoading = false;
@@ -254,10 +346,15 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         debugPrint('Updated with fresh data for prefix: $effectivePrefix');
       } else {
         debugPrint('Discarding result for $effectivePrefix (current: $_currentPrefix)');
-        _isRefreshing = false;
       }
     } catch (e) {
-      if (mounted && _currentPrefix == effectivePrefix) {
+      if (_isListRequestStillValid(
+        requestId: requestId,
+        requestGeneration: requestGeneration,
+        requestServerId: requestServerId,
+        requestBucketName: requestBucketName,
+        requestPrefix: effectivePrefix,
+      )) {
         setState(() {
           _isLoading = false;
           _isRefreshing = false;
@@ -294,6 +391,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               '2. The bucket exists in your account';
         }
 
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage), duration: const Duration(seconds: 8)));
@@ -303,9 +401,9 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   void _clearCache() {
     // Clear all cached data for this bucket
-    final prefix = '${widget.serverConfig.id}:${widget.serverConfig.bucket}:';
-    _cache.removeWhere((key, value) => key.startsWith(prefix));
-    debugPrint('Cleared cache for bucket: ${widget.serverConfig.bucket}');
+    final prefix = '${widget.serverConfig.id}:${_storageService.bucketName}:';
+    _sharedCache.removeWhere((key, value) => key.startsWith(prefix));
+    debugPrint('Cleared cache for container: ${_storageService.bucketName}');
   }
 
   void _showDeleteProgressDialog(String fileName) {
@@ -385,11 +483,13 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       if (newKey.isNotEmpty && newKey != oldKey) {
         try {
           await _storageService.renameObject(oldKey, newKey);
+          if (!mounted) return;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(context.loc('rename_success', [oldKey, newKey]))));
           _listObjects();
         } catch (e) {
+          if (!mounted) return;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(context.loc('rename_error', [oldKey, e.toString()]))));
@@ -598,19 +698,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   }
 
   String _buildFileUrl(String key) {
-    if (widget.serverConfig.cdnUrl != null && widget.serverConfig.cdnUrl!.isNotEmpty) {
-      String cdnUrl = widget.serverConfig.cdnUrl!;
-      if (cdnUrl.endsWith('/')) {
-        cdnUrl = cdnUrl.substring(0, cdnUrl.length - 1);
-      }
-      return '$cdnUrl/$key';
-    } else {
-      String baseUrl = widget.serverConfig.address;
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-      }
-      return '$baseUrl/$key';
-    }
+    return _storageService.getFileUrl(key);
   }
 
   // File preview method
@@ -830,6 +918,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     if (mounted) {
       _clearCache();
       await _listObjects(prefix: _currentPrefix);
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -898,7 +987,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       appBar: AppBar(
         title: _isSelectionMode
             ? Text(context.loc('selected_count', [_selectedItems.length.toString()]))
-            : (Platform.isMobile ? Text(widget.serverConfig.name) : _buildBreadcrumbBar(inAppBar: true)),
+            : (Platform.isMobile ? _buildMobileDirectoryTitle() : _buildBreadcrumbBar(inAppBar: true)),
         backgroundColor: Colors.transparent,
         leading: _buildHeaderLeading(context),
         leadingWidth: _headerLeadingWidth,
@@ -907,16 +996,21 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         centerTitle: Platform.isMobile,
         actions: Platform.isMobile
             ? [
-                if (_isSelectionMode)
+                // Back button (up to parent)
+                if (_currentPrefix.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.close),
                     onPressed: () {
-                      setState(() {
-                        _isSelectionMode = false;
-                        _selectedItems.clear();
-                      });
+                      // Navigate to parent directory
+                      final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
+                      if (parts.isNotEmpty) {
+                        parts.removeLast();
+                        final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
+                        _navigateToDirectory(parentPath);
+                      }
                     },
-                    tooltip: context.loc('cancel_selection'),
+                    icon: const Icon(Icons.arrow_upward),
+                    tooltip: context.loc('up_to_parent'),
+                    style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
                   ),
               ]
             : _buildActionButtons(context),
@@ -939,8 +1033,6 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
           children: [
             Column(
               children: [
-                if (Platform.isMobile) _buildBreadcrumbBar(inAppBar: false),
-
                 // Objects list/grid
                 Expanded(
                   child: LoadingOverlay(
@@ -1049,7 +1141,23 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showDrawerButton)
-            IconButton(icon: const Icon(Icons.menu), onPressed: widget.onOpenDrawer, tooltip: context.loc('open')),
+            if (_isSelectionMode)
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedItems.clear();
+                  });
+                },
+                tooltip: context.loc('cancel_selection'),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.menu_open),
+                onPressed: widget.onOpenDrawer,
+                tooltip: context.loc('open'),
+              ),
           if (!showDrawerButton && _isSelectionMode)
             IconButton(
               icon: const Icon(Icons.close),
@@ -1353,7 +1461,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
                   ),
             trailing: PopupMenuButton<String>(
               position: PopupMenuPosition.under,
-              onSelected: (value) => _handleContextMenuSelection(context, value, object),
+              onSelected: (value) => _handleContextMenuSelection(value, object),
               itemBuilder: (context) => _buildContextMenuItems(object),
             ),
             onTap: () {
@@ -1759,23 +1867,148 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
               ),
             ),
           ),
-          // Back button (up to parent)
-          if (_currentPrefix.isNotEmpty)
-            IconButton(
-              onPressed: () {
-                // Navigate to parent directory
-                final parts = _currentPrefix.split('/').where((p) => p.isNotEmpty).toList();
-                if (parts.isNotEmpty) {
-                  parts.removeLast();
-                  final parentPath = parts.isEmpty ? '' : '${parts.join('/')}/';
-                  _navigateToDirectory(parentPath);
-                }
-              },
-              icon: const Icon(Icons.arrow_upward),
-              tooltip: context.loc('up_to_parent'),
-              style: IconButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.onSurface),
-            ),
         ],
+      ),
+    );
+  }
+
+  String _mobileTitleLabel() {
+    final parts = _currentPrefix.split('/').where((part) => part.isNotEmpty).toList();
+    if (parts.isEmpty) {
+      return widget.serverConfig.name;
+    }
+    return parts.last;
+  }
+
+  List<_MobilePathEntry> _mobilePathMenuItems() {
+    final entries = <_MobilePathEntry>[_MobilePathEntry(label: widget.serverConfig.name, prefix: '', depth: 0)];
+    final parts = _currentPrefix.split('/').where((part) => part.isNotEmpty).toList();
+    for (var i = 0; i < parts.length; i++) {
+      final prefix = '${parts.sublist(0, i + 1).join('/')}/';
+      entries.add(_MobilePathEntry(label: parts[i], prefix: prefix, depth: i + 1));
+    }
+    return entries;
+  }
+
+  Future<void> _showMobilePathDrawer() async {
+    final entries = _mobilePathMenuItems();
+    final targetPrefix = await showMaterialModalBottomSheet<String>(
+      context: context,
+      expand: false,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.35),
+      duration: const Duration(milliseconds: 260),
+      builder: (dialogContext) {
+        final colorScheme = Theme.of(dialogContext).colorScheme;
+        final sheetHeight = MediaQuery.of(dialogContext).size.height * 0.75;
+        return Material(
+          color: Colors.transparent,
+          child: SafeArea(
+            top: true,
+            bottom: false,
+            child: SizedBox(
+              height: sheetHeight,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.16), blurRadius: 22, offset: const Offset(0, -8)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurface.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: ModalScrollController.of(dialogContext),
+                        padding: const EdgeInsets.only(top: 12, bottom: 18),
+                        itemCount: entries.length,
+                        itemBuilder: (itemContext, index) {
+                          final entry = entries[index];
+                          final isCurrent = entry.prefix == _currentPrefix;
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => Navigator.pop(dialogContext, entry.prefix),
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(16 + (entry.depth * 18), 14, 16, 14),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.folder_rounded,
+                                      size: 18,
+                                      color: isCurrent
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurface.withValues(alpha: 0.68),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        entry.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(itemContext).textTheme.bodyLarge?.copyWith(
+                                          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                                          color: isCurrent ? colorScheme.primary : colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isCurrent) Icon(Icons.check_rounded, size: 18, color: colorScheme.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (targetPrefix != null && targetPrefix != _currentPrefix) {
+      _navigateToDirectory(targetPrefix);
+    }
+  }
+
+  Widget _buildMobileDirectoryTitle() {
+    return InkWell(
+      onTap: _showMobilePathDrawer,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.5),
+              child: Text(
+                _mobileTitleLabel(),
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down_rounded),
+          ],
+        ),
       ),
     );
   }
@@ -1792,7 +2025,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     ];
   }
 
-  void _handleContextMenuSelection(BuildContext context, String value, S3Item object) {
+  void _handleContextMenuSelection(String value, S3Item object) {
     if (value == 'download') {
       _downloadObject(object.key);
     } else if (value == 'copy') {
@@ -1835,7 +2068,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
     showMenu<String>(context: context, position: relativeRect, items: items).then((value) {
       if (value != null) {
-        _handleContextMenuSelection(context, value, object);
+        _handleContextMenuSelection(value, object);
       }
     });
   }
@@ -2075,7 +2308,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _showCopyMenu() {
+  Future<void> _showCopyMenu() async {
     // Get the button's RenderBox using the GlobalKey
     final RenderObject? renderObject = _copyButtonKey.currentContext?.findRenderObject();
     if (renderObject == null || renderObject is! RenderBox) return;
@@ -2092,7 +2325,7 @@ class _PreviewContentState extends State<_PreviewContent> {
       Offset.zero & overlay.size,
     );
 
-    showMenu<String>(
+    final value = await showMenu<String>(
       context: context,
       position: position,
       items: [
@@ -2107,21 +2340,20 @@ class _PreviewContentState extends State<_PreviewContent> {
           ),
         ],
       ],
-    ).then((String? value) {
-      if (value == null) return;
+    );
+    if (!mounted || value == null) return;
 
-      final url = _getFileUrl();
+    final url = _getFileUrl();
 
-      switch (value) {
-        case 'url':
-          _copyToClipboard(url, context.loc('url_copied'));
-          break;
-        case 'markdown':
-          final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
-          _copyToClipboard(markdown, context.loc('markdown_copied'));
-          break;
-      }
-    });
+    switch (value) {
+      case 'url':
+        _copyToClipboard(url, context.loc('url_copied'));
+        break;
+      case 'markdown':
+        final markdown = '![${_basenameFromKey(widget.object.key)}]($url)';
+        _copyToClipboard(markdown, context.loc('markdown_copied'));
+        break;
+    }
   }
 
   Future<void> _handleDownload() async {

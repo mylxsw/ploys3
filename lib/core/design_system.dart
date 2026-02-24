@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 class AppTheme {
   /// 深色主题
   static ThemeData darkTheme() {
-    const primaryColor = Color(0xFF6366F1);
-    const secondaryColor = Color(0xFF8B5CF6);
+    const primaryColor = Color(0xFF2360A3);
+    const secondaryColor = Color(0xFF21B2B5);
     const backgroundColor = Color(0xFF0F0F0F);
     const surfaceColor = Color(0xFF1A1A1A);
     const cardColor = Color(0xFF242424);
@@ -128,8 +128,8 @@ class AppTheme {
 
   /// 浅色主题
   static ThemeData lightTheme() {
-    const primaryColor = Color(0xFF5B5BFF);
-    const secondaryColor = Color(0xFF8B5CF6);
+    const primaryColor = Color(0xFF2360A3);
+    const secondaryColor = Color(0xFF21B2B5);
     const backgroundColor = Color(0xFFF8F9FC);
     const surfaceColor = Colors.white;
     const cardColor = Colors.white;

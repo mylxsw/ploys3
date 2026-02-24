@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +21,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:ploys3/core/upload_manager.dart';
-import 'package:ploys3/core/storage/s3_storage_service.dart';
+import 'package:ploys3/core/storage/storage_service_factory.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
 import 'package:path/path.dart' as p;
 import 'package:ploys3/widgets/upload_queue_ui.dart';
@@ -28,8 +29,10 @@ import 'package:ploys3/widgets/upload_queue_ui.dart';
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
 
-final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-final ValueNotifier<UploadManager?> _imageBedUploadManagerNotifier = ValueNotifier<UploadManager?>(null);
+final FlutterLocalNotificationsPlugin _localNotifications =
+    FlutterLocalNotificationsPlugin();
+final ValueNotifier<UploadManager?> _imageBedUploadManagerNotifier =
+    ValueNotifier<UploadManager?>(null);
 UploadManager? _imageBedUploadManager;
 String? _imageBedUploadServerId;
 
@@ -51,30 +54,37 @@ Future<void> onMenuBarFilesDropped(List<String> filePaths) async {
 }
 
 Future<void> _initLocalNotifications() async {
-  final DarwinInitializationSettings darwinSettings = DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-    notificationCategories: <DarwinNotificationCategory>[
-      DarwinNotificationCategory(
-        UploadManager.copyMarkdownCategoryId,
-        actions: <DarwinNotificationAction>[
-          DarwinNotificationAction.plain(
-            UploadManager.copyMarkdownActionId,
-            LanguageManager.instance.getLocalized('copy_markdown'),
+  final DarwinInitializationSettings darwinSettings =
+      DarwinInitializationSettings(
+        // Keep app startup independent from system permission prompt.
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+        notificationCategories: <DarwinNotificationCategory>[
+          DarwinNotificationCategory(
+            UploadManager.copyMarkdownCategoryId,
+            actions: <DarwinNotificationAction>[
+              DarwinNotificationAction.plain(
+                UploadManager.copyMarkdownActionId,
+                LanguageManager.instance.getLocalized('copy_markdown'),
+              ),
+            ],
           ),
         ],
-      ),
-    ],
+      );
+  const AndroidInitializationSettings androidSettings =
+      AndroidInitializationSettings('@mipmap/launcher_icon');
+  const WindowsInitializationSettings windowsSettings =
+      WindowsInitializationSettings(
+        appName: 'Ploy S3',
+        appUserModelId: 'PloyS3.PloyS3',
+        guid: '54e1f5c6-1a3b-4d64-9a6b-7b8f47d59f1e',
+      );
+  const LinuxInitializationSettings linuxSettings = LinuxInitializationSettings(
+    defaultActionName: 'Open',
   );
-  const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const WindowsInitializationSettings windowsSettings = WindowsInitializationSettings(
-    appName: 'Ploy S3',
-    appUserModelId: 'PloyS3.PloyS3',
-    guid: '54e1f5c6-1a3b-4d64-9a6b-7b8f47d59f1e',
-  );
-  const LinuxInitializationSettings linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open');
   final InitializationSettings initSettings = InitializationSettings(
+    iOS: darwinSettings,
     macOS: darwinSettings,
     android: androidSettings,
     windows: windowsSettings,
@@ -85,10 +95,30 @@ Future<void> _initLocalNotifications() async {
     onDidReceiveNotificationResponse: _handleNotificationResponse,
   );
   UploadManager.initializeNotifications(_localNotifications);
+  unawaited(_requestNotificationPermissionInBackground());
+}
+
+Future<void> _requestNotificationPermissionInBackground() async {
+  try {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (Platform.isMacOS) {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+            MacOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
+  } catch (_) {
+    // Ignore permission request errors to avoid affecting app startup.
+  }
 }
 
 class _ImageBedConfig {
-  _ImageBedConfig({required this.server, required this.uploadDir, required this.namingRule});
+  _ImageBedConfig({
+    required this.server,
+    required this.uploadDir,
+    required this.namingRule,
+  });
 
   final S3ServerConfig server;
   final String uploadDir;
@@ -101,15 +131,26 @@ Future<_ImageBedConfig?> _loadImageBedConfig() async {
   if (serverId.isEmpty) return null;
 
   final serverConfigs = prefs.getStringList('server_configs') ?? [];
-  final servers = serverConfigs.map((config) => S3ServerConfig.fromJson(json.decode(config))).toList();
-  final server = servers.cast<S3ServerConfig?>().firstWhere((s) => s?.id == serverId, orElse: () => null);
+  final servers = serverConfigs
+      .map((config) => S3ServerConfig.fromJson(json.decode(config)))
+      .toList();
+  final server = servers.cast<S3ServerConfig?>().firstWhere(
+    (s) => s?.id == serverId,
+    orElse: () => null,
+  );
   if (server == null) return null;
 
   final uploadDir = prefs.getString('image_bed_upload_dir') ?? '';
   final namingRuleRaw = prefs.getString('image_bed_naming_rule') ?? 'original';
-  final namingRule = namingRuleRaw == 'random' ? ImageBedNamingRule.random : ImageBedNamingRule.original;
+  final namingRule = namingRuleRaw == 'random'
+      ? ImageBedNamingRule.random
+      : ImageBedNamingRule.original;
 
-  return _ImageBedConfig(server: server, uploadDir: uploadDir, namingRule: namingRule);
+  return _ImageBedConfig(
+    server: server,
+    uploadDir: uploadDir,
+    namingRule: namingRule,
+  );
 }
 
 Future<void> _promptConfigureImageBed() async {
@@ -123,19 +164,31 @@ Future<void> _promptConfigureImageBed() async {
         title: Text(context.loc('image_bed_settings')),
         content: Text(context.loc('image_bed_config_required')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.loc('image_bed_go_config'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.loc('image_bed_go_config')),
+          ),
         ],
       );
     },
   );
 
   if (shouldOpen == true && ctx.mounted) {
-    Navigator.push(ctx, MaterialPageRoute(builder: (context) => const ImageBedSettingsPage()));
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(builder: (context) => const ImageBedSettingsPage()),
+    );
   }
 }
 
-Future<void> _uploadImageBedFiles(List<String> filePaths, _ImageBedConfig config) async {
+Future<void> _uploadImageBedFiles(
+  List<String> filePaths,
+  _ImageBedConfig config,
+) async {
   final uploadManager = _getOrCreateImageBedUploadManager(config);
 
   final targetPrefix = _normalizeUploadPrefix(config.uploadDir);
@@ -151,7 +204,10 @@ String _normalizeUploadPrefix(String uploadDir) {
   return uploadDir.endsWith('/') ? uploadDir : '$uploadDir/';
 }
 
-String _resolveImageBedFileName(String filePath, ImageBedNamingRule namingRule) {
+String _resolveImageBedFileName(
+  String filePath,
+  ImageBedNamingRule namingRule,
+) {
   final originalName = p.basename(filePath);
   if (namingRule == ImageBedNamingRule.original) {
     return originalName;
@@ -172,8 +228,11 @@ UploadManager _getOrCreateImageBedUploadManager(_ImageBedConfig config) {
   if (_imageBedUploadManager != null && _imageBedUploadServerId == serverId) {
     return _imageBedUploadManager!;
   }
-  final service = S3StorageService(config.server);
-  _imageBedUploadManager = UploadManager(service: service, cdnUrl: config.server.cdnUrl);
+  final service = StorageServiceFactory.create(config.server);
+  _imageBedUploadManager = UploadManager(
+    service: service,
+    cdnUrl: config.server.cdnUrl,
+  );
   _imageBedUploadServerId = serverId;
   _imageBedUploadManagerNotifier.value = _imageBedUploadManager;
   return _imageBedUploadManager!;
@@ -191,7 +250,10 @@ void _setupMenuBarChannel() {
         onOpenSettingsCallback?.call();
         break;
       default:
-        throw PlatformException(code: 'Unimplemented', details: 'Method ${call.method} not implemented');
+        throw PlatformException(
+          code: 'Unimplemented',
+          details: 'Method ${call.method} not implemented',
+        );
     }
   });
 }
@@ -217,7 +279,7 @@ void main() async {
 
   // Setup menu bar channel for macOS
   _setupMenuBarChannel();
-  await _initLocalNotifications();
+  unawaited(_initLocalNotifications());
 
   // 初始化菜单栏设置（仅 macOS）
   if (Platform.isMacOS) {
@@ -258,7 +320,10 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([ThemeManager.instance, LanguageManager.instance]),
+      animation: Listenable.merge([
+        ThemeManager.instance,
+        LanguageManager.instance,
+      ]),
       builder: (context, child) {
         return MaterialApp(
           title: LanguageManager.instance.getLocalized('app_name_s3'),
@@ -309,20 +374,35 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openSettingsPage() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) =>
+            SettingsPage(onServerConfigsChanged: _loadConfigs),
+      ),
+    );
   }
 
   Future<void> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings =
+        prefs.getStringList('server_configs') ?? [];
+    final serverConfigs = serverConfigsStrings
+        .map((config) => S3ServerConfig.fromJson(json.decode(config)))
+        .toList();
+    final selectedId = _selectedServerConfig?.id;
     setState(() {
-      _serverConfigs = serverConfigsStrings.map((config) => S3ServerConfig.fromJson(json.decode(config))).toList();
+      _serverConfigs = serverConfigs;
+      _selectedServerConfig = serverConfigs.cast<S3ServerConfig?>().firstWhere(
+        (server) => server?.id == selectedId,
+        orElse: () => null,
+      );
     });
   }
 
   Future<void> _deleteServer(S3ServerConfig server) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings =
+        prefs.getStringList('server_configs') ?? [];
     serverConfigsStrings.removeWhere((configStr) {
       final config = S3ServerConfig.fromJson(json.decode(configStr));
       return config.id == server.id;
@@ -337,56 +417,79 @@ class _AppShellState extends State<AppShell> {
     await _loadConfigs();
   }
 
-  void _showServerContextMenu(BuildContext context, Offset position, S3ServerConfig server) {
-    showMenu<String>(
+  Future<void> _showServerContextMenu(
+    Offset position,
+    S3ServerConfig server,
+  ) async {
+    final value = await showMenu<String>(
       context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx + 1, position.dy + 1),
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
       items: [
         PopupMenuItem<String>(
           value: 'edit',
           child: Row(
-            children: [const Icon(Icons.edit, size: 18), const SizedBox(width: 8), Text(context.loc('edit_server'))],
+            children: [
+              const Icon(Icons.edit, size: 18),
+              const SizedBox(width: 8),
+              Text(context.loc('edit_server')),
+            ],
           ),
         ),
         PopupMenuItem<String>(
           value: 'delete',
           child: Row(
             children: [
-              Icon(Icons.delete, size: 18, color: Theme.of(context).colorScheme.error),
+              Icon(
+                Icons.delete,
+                size: 18,
+                color: Theme.of(context).colorScheme.error,
+              ),
               const SizedBox(width: 8),
-              Text(context.loc('delete'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                context.loc('delete'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
           ),
         ),
       ],
-    ).then((value) {
-      if (value == 'edit') {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                S3ConfigPage(existingConfig: server, onSave: _loadConfigs),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              const curve = Curves.easeOutQuart;
-              var scaleAnimation = Tween(
-                begin: 0.0,
-                end: 1.0,
-              ).animate(CurvedAnimation(parent: animation, curve: curve));
-              var fadeAnimation = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: animation, curve: curve));
-              return ScaleTransition(
-                scale: scaleAnimation,
-                alignment: Alignment.topLeft,
-                child: FadeTransition(opacity: fadeAnimation, child: child),
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 400),
-            reverseTransitionDuration: const Duration(milliseconds: 300),
-          ),
-        );
-      } else if (value == 'delete') {
-        _showDeleteConfirmation(context, server);
-      }
-    });
+    );
+    if (!mounted) return;
+
+    if (value == 'edit') {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              S3ConfigPage(existingConfig: server, onSave: _loadConfigs),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const curve = Curves.easeOutQuart;
+            var scaleAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: curve));
+            var fadeAnimation = Tween(
+              begin: 0.0,
+              end: 1.0,
+            ).animate(CurvedAnimation(parent: animation, curve: curve));
+            return ScaleTransition(
+              scale: scaleAnimation,
+              alignment: Alignment.topLeft,
+              child: FadeTransition(opacity: fadeAnimation, child: child),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 400),
+          reverseTransitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    } else if (value == 'delete') {
+      _showDeleteConfirmation(context, server);
+    }
   }
 
   void _showDeleteConfirmation(BuildContext context, S3ServerConfig server) {
@@ -394,12 +497,21 @@ class _AppShellState extends State<AppShell> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(context.loc('delete_server_title')),
-        content: Text(context.loc('delete_server_message').replaceAll('{name}', server.name)),
+        content: Text(
+          context
+              .loc('delete_server_message')
+              .replaceAll('{name}', server.name),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(context.loc('delete')),
           ),
         ],
@@ -440,7 +552,8 @@ class _AppShellState extends State<AppShell> {
                       isSidebarExtended: true,
                       sidebarWidth: math.min(constraints.maxWidth * 0.85, 320),
                       isDrawer: true,
-                      onDrawerClose: () => _scaffoldKey.currentState?.closeDrawer(),
+                      onDrawerClose: () =>
+                          _scaffoldKey.currentState?.closeDrawer(),
                     ),
                   ),
                 )
@@ -454,18 +567,27 @@ class _AppShellState extends State<AppShell> {
                     ? _buildContentArea(
                         context,
                         margin: const EdgeInsets.all(0),
-                        onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                        onOpenDrawer: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
                       )
                     : Row(
                         children: [
-                          _buildSidebar(context, isSidebarExtended: _isSidebarExtended, sidebarWidth: _sidebarWidth),
+                          _buildSidebar(
+                            context,
+                            isSidebarExtended: _isSidebarExtended,
+                            sidebarWidth: _sidebarWidth,
+                          ),
 
                           // Resize Handle
                           if (!useDrawer)
                             MouseRegion(
                               cursor: SystemMouseCursors.resizeColumn,
-                              onEnter: (_) => setState(() => _isHoveringResizeHandle = true),
-                              onExit: (_) => setState(() => _isHoveringResizeHandle = false),
+                              onEnter: (_) => setState(
+                                () => _isHoveringResizeHandle = true,
+                              ),
+                              onExit: (_) => setState(
+                                () => _isHoveringResizeHandle = false,
+                              ),
                               child: GestureDetector(
                                 onHorizontalDragUpdate: (details) {
                                   setState(() {
@@ -478,8 +600,12 @@ class _AppShellState extends State<AppShell> {
                                     }
 
                                     _sidebarWidth += details.delta.dx;
-                                    if (_sidebarWidth < 200) _sidebarWidth = 200;
-                                    if (_sidebarWidth > 400) _sidebarWidth = 400;
+                                    if (_sidebarWidth < 200) {
+                                      _sidebarWidth = 200;
+                                    }
+                                    if (_sidebarWidth > 400) {
+                                      _sidebarWidth = 400;
+                                    }
                                   });
                                 },
                                 child: Container(
@@ -490,7 +616,10 @@ class _AppShellState extends State<AppShell> {
                                     child: Container(
                                       width: 2,
                                       color: _isHoveringResizeHandle
-                                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+                                          ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.5)
                                           : Colors.transparent,
                                     ),
                                   ),
@@ -498,7 +627,12 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
 
-                          Expanded(child: _buildContentArea(context, margin: const EdgeInsets.fromLTRB(0, 0, 8, 8))),
+                          Expanded(
+                            child: _buildContentArea(
+                              context,
+                              margin: const EdgeInsets.fromLTRB(0, 0, 8, 8),
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -519,13 +653,21 @@ class _AppShellState extends State<AppShell> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: isSidebarExtended ? sidebarWidth : 80,
-      margin: isDrawer ? EdgeInsets.zero : const EdgeInsets.fromLTRB(8, 0, 0, 8),
+      margin: isDrawer
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(8, 0, 0, 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: isDrawer
             ? null
-            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -547,27 +689,27 @@ class _AppShellState extends State<AppShell> {
                         left: 12,
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Theme.of(context).colorScheme.primary,
-                                    Theme.of(context).colorScheme.secondary,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                'assets/app_icon.png',
+                                width: Platform.isMobile ? 60 : 40,
+                                height: Platform.isMobile ? 60 : 40,
                               ),
-                              child: Icon(Icons.cloud_outlined, size: Platform.isMobile ? 40 : 20, color: Colors.white),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               context.loc('app_name_s3'),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontSize: Platform.isMobile ? AppFontSizes.xxxl : AppFontSizes.lg,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    fontSize: Platform.isMobile
+                                        ? AppFontSizes.xxxl
+                                        : AppFontSizes.lg,
+                                  ),
                             ),
                           ],
                         ),
@@ -613,14 +755,24 @@ class _AppShellState extends State<AppShell> {
                                       Navigator.push(
                                         context,
                                         PageRouteBuilder(
-                                          pageBuilder: (context, animation, secondaryAnimation) =>
-                                              S3ConfigPage(onSave: _loadConfigs),
+                                          pageBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                              ) => S3ConfigPage(
+                                                onSave: _loadConfigs,
+                                              ),
                                         ),
                                       );
                                     },
                                     child: const Padding(
                                       padding: EdgeInsets.all(8),
-                                      child: Icon(Icons.add, color: Colors.white, size: 20),
+                                      child: Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -638,25 +790,21 @@ class _AppShellState extends State<AppShell> {
                   alignment: Alignment.center,
                   child: Tooltip(
                     message: context.loc('expand'),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
-                        ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isSidebarExtended = true;
+                          });
+                        },
+                        child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          onTap: () {
-                            setState(() {
-                              _isSidebarExtended = true;
-                            });
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(Icons.cloud_outlined, size: 24, color: Colors.white),
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            width: 40,
+                            height: 40,
                           ),
                         ),
                       ),
@@ -676,7 +824,9 @@ class _AppShellState extends State<AppShell> {
                       Navigator.push(
                         context,
                         PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) => S3ConfigPage(onSave: _loadConfigs),
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  S3ConfigPage(onSave: _loadConfigs),
                         ),
                       );
                     },
@@ -703,14 +853,22 @@ class _AppShellState extends State<AppShell> {
                               Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) =>
-                                      S3ConfigPage(onSave: _loadConfigs),
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => S3ConfigPage(onSave: _loadConfigs),
                                 ),
                               );
                             },
                             child: const Padding(
                               padding: EdgeInsets.all(8),
-                              child: Icon(Icons.add, color: Colors.white, size: 20),
+                              child: Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -720,16 +878,26 @@ class _AppShellState extends State<AppShell> {
                 ),
             ],
           ),
-          indicatorColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-          indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          indicatorColor: Theme.of(
+            context,
+          ).colorScheme.primaryContainer.withValues(alpha: 0.5),
+          indicatorShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           destinations: [
             NavigationRailDestination(
               icon: Icon(
                 Icons.home_outlined,
                 size: 25,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
-              selectedIcon: Icon(Icons.home_filled, size: 25, color: Theme.of(context).colorScheme.primary),
+              selectedIcon: Icon(
+                Icons.home_filled,
+                size: 25,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               label: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: sidebarWidth - 80, // Prevent overflow
@@ -740,7 +908,9 @@ class _AppShellState extends State<AppShell> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: AppFontSizes.md,
-                    fontWeight: _selectedServerConfig == null ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: _selectedServerConfig == null
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     color: _selectedServerConfig == null
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.onSurface,
@@ -755,15 +925,21 @@ class _AppShellState extends State<AppShell> {
                 icon: Icon(
                   Icons.cloud_outlined,
                   size: 25,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-                selectedIcon: Icon(Icons.cloud_done, size: 25, color: Theme.of(context).colorScheme.primary),
+                selectedIcon: Icon(
+                  Icons.cloud_done,
+                  size: 25,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 label: GestureDetector(
                   onSecondaryTapDown: (details) {
-                    _showServerContextMenu(context, details.globalPosition, server);
+                    _showServerContextMenu(details.globalPosition, server);
                   },
                   onLongPressStart: (details) {
-                    _showServerContextMenu(context, details.globalPosition, server);
+                    _showServerContextMenu(details.globalPosition, server);
                   },
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -775,7 +951,9 @@ class _AppShellState extends State<AppShell> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: AppFontSizes.md,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.onSurface,
@@ -793,7 +971,10 @@ class _AppShellState extends State<AppShell> {
               children: [
                 // Settings Button
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -802,7 +983,11 @@ class _AppShellState extends State<AppShell> {
                         Navigator.push(
                           context,
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    SettingsPage(
+                                      onServerConfigsChanged: _loadConfigs,
+                                    ),
                           ),
                         );
                       },
@@ -820,7 +1005,9 @@ class _AppShellState extends State<AppShell> {
                                       context.loc('settings'),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
-                                      style: TextStyle(fontWeight: FontWeight.w500),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -835,37 +1022,57 @@ class _AppShellState extends State<AppShell> {
           ),
           onDestinationSelected: (index) {
             setState(() {
-              _selectedServerConfig = index <= 0 ? null : _serverConfigs[index - 1];
+              _selectedServerConfig = index <= 0
+                  ? null
+                  : _serverConfigs[index - 1];
             });
             onDrawerClose?.call();
           },
-          selectedIndex: _selectedServerConfig != null && _serverConfigs.isNotEmpty
-              ? _serverConfigs.indexWhere((s) => s.id == _selectedServerConfig!.id) + 1
+          selectedIndex:
+              _selectedServerConfig != null && _serverConfigs.isNotEmpty
+              ? _serverConfigs.indexWhere(
+                      (s) => s.id == _selectedServerConfig!.id,
+                    ) +
+                    1
               : 0,
         ),
       ),
     );
   }
 
-  Widget _buildContentArea(BuildContext context, {required EdgeInsets margin, VoidCallback? onOpenDrawer}) {
+  Widget _buildContentArea(
+    BuildContext context, {
+    required EdgeInsets margin,
+    VoidCallback? onOpenDrawer,
+  }) {
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: _selectedServerConfig != null
             ? S3BrowserPage(
+                key: ValueKey(_selectedServerConfig!.id),
                 serverConfig: _selectedServerConfig!,
                 onEditServer: () {
                   Navigator.push(
                     context,
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) =>
-                          S3ConfigPage(existingConfig: _selectedServerConfig!, onSave: _loadConfigs),
+                          S3ConfigPage(
+                            existingConfig: _selectedServerConfig!,
+                            onSave: _loadConfigs,
+                          ),
                     ),
                   );
                 },
@@ -873,31 +1080,50 @@ class _AppShellState extends State<AppShell> {
               )
             : Stack(
                 children: [
-                  Scaffold(
-                    appBar: onOpenDrawer != null
-                        ? AppBar(
-                            title: Text(context.loc("s3_manager")),
-                            centerTitle: true,
-                            leading: IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
-                            elevation: 0,
-                            scrolledUnderElevation: 0,
-                            actions: [
-                              IconButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    PageRouteBuilder(
-                                      pageBuilder: (context, animation, secondaryAnimation) =>
-                                          S3ConfigPage(onSave: _loadConfigs),
-                                    ),
-                                  );
-                                },
-                                icon: Icon(Icons.add),
-                              ),
-                            ],
-                          )
-                        : null,
-                    body: _serverConfigs.isEmpty ? _buildEmptyState(context) : _buildServerPicker(context),
+                  Builder(
+                    builder: (context) {
+                      final appBarColor =
+                          Theme.of(context).appBarTheme.backgroundColor ??
+                          Theme.of(context).colorScheme.surface;
+                      return Scaffold(
+                        backgroundColor: appBarColor,
+                        appBar: onOpenDrawer != null
+                            ? AppBar(
+                                title: Text(context.loc("s3_manager")),
+                                centerTitle: true,
+                                leading: IconButton(
+                                  icon: const Icon(Icons.menu),
+                                  onPressed: onOpenDrawer,
+                                ),
+                                elevation: 0,
+                                scrolledUnderElevation: 0,
+                                actions: [
+                                  IconButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          pageBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                              ) => S3ConfigPage(
+                                                onSave: _loadConfigs,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(Icons.add),
+                                  ),
+                                ],
+                              )
+                            : null,
+                        body: _serverConfigs.isEmpty
+                            ? _buildEmptyState(context)
+                            : _buildServerPicker(context),
+                      );
+                    },
                   ),
                   ValueListenableBuilder<UploadManager?>(
                     valueListenable: _imageBedUploadManagerNotifier,
@@ -922,7 +1148,10 @@ class _AppShellState extends State<AppShell> {
       onAction: () {
         Navigator.push(
           context,
-          PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => S3ConfigPage(onSave: _loadConfigs)),
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                S3ConfigPage(onSave: _loadConfigs),
+          ),
         );
       },
       actionText: context.loc('add_new_server'),
@@ -941,9 +1170,11 @@ class _AppShellState extends State<AppShell> {
             margin: const EdgeInsets.all(10),
             child: Text(
               context.loc('select_server_to_start'),
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
           Expanded(
@@ -963,10 +1194,15 @@ class _AppShellState extends State<AppShell> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.cloud_outlined, color: Theme.of(context).colorScheme.primary),
+                        child: Icon(
+                          Icons.cloud_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -975,16 +1211,21 @@ class _AppShellState extends State<AppShell> {
                           children: [
                             Text(
                               server.name,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              server.bucket,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
+                              _serverSubtitle(server),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1019,7 +1260,10 @@ class _AppShellState extends State<AppShell> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
-        decoration: BoxDecoration(color: backgroundColor, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: CustomPaint(
           foregroundPainter: _DashedBorderPainter(
             color: borderColor,
@@ -1062,7 +1306,10 @@ class _AppShellState extends State<AppShell> {
           setState(() {
             _isImageBedDragging = false;
           });
-          final paths = details.files.map((file) => file.path).whereType<String>().toList();
+          final paths = details.files
+              .map((file) => file.path)
+              .whereType<String>()
+              .toList();
           if (paths.isEmpty) return;
           await onMenuBarFilesDropped(paths);
         },
@@ -1075,17 +1322,38 @@ class _AppShellState extends State<AppShell> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 6, bottom: 10),
-          child: Text(context.loc('image_bed'), style: theme.textTheme.bodyMedium?.copyWith(color: hintColor)),
+          child: Text(
+            context.loc('image_bed'),
+            style: theme.textTheme.bodyMedium?.copyWith(color: hintColor),
+          ),
         ),
         SizedBox(width: double.infinity, child: uploadArea),
       ],
     );
   }
 
+  String _serverSubtitle(S3ServerConfig server) {
+    switch (server.type) {
+      case ServerType.s3:
+        return server.bucket.isNotEmpty ? server.bucket : server.address;
+      case ServerType.local:
+        return server.localPath;
+      case ServerType.ssh:
+      case ServerType.ftp:
+        final host = server.host.isNotEmpty ? server.host : server.address;
+        final port = server.port > 0 ? ':${server.port}' : '';
+        final remote = server.remotePath.isNotEmpty ? server.remotePath : '/';
+        return '$host$port  $remote';
+    }
+  }
+
   Future<void> _pickAndUploadFiles() async {
     final result = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (result == null) return;
-    final paths = result.files.map((file) => file.path).whereType<String>().toList();
+    final paths = result.files
+        .map((file) => file.path)
+        .whereType<String>()
+        .toList();
     if (paths.isEmpty) return;
     await onMenuBarFilesDropped(paths);
   }

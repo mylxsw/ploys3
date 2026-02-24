@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ploys3/core/mcp/mcp_types.dart';
-import 'package:ploys3/core/storage/s3_storage_service.dart';
+import 'package:ploys3/core/storage/storage_service_factory.dart';
 import 'package:ploys3/models/s3_server_config.dart';
 
 class McpService {
@@ -13,7 +13,7 @@ class McpService {
     return const [
       McpToolDefinition(
         name: 'list_servers',
-        description: 'List configured S3 servers.',
+        description: 'List configured servers.',
         inputSchema: {'type': 'object', 'properties': {}},
       ),
       McpToolDefinition(
@@ -22,8 +22,14 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
-            'prefix': {'type': 'string', 'description': 'Optional prefix to list.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
+            'prefix': {
+              'type': 'string',
+              'description': 'Optional prefix to list.',
+            },
           },
           'required': ['serverId'],
         },
@@ -34,8 +40,14 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
-            'folderPath': {'type': 'string', 'description': 'Folder path, ending with / is optional.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
+            'folderPath': {
+              'type': 'string',
+              'description': 'Folder path, ending with / is optional.',
+            },
           },
           'required': ['serverId', 'folderPath'],
         },
@@ -46,7 +58,10 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
             'key': {'type': 'string', 'description': 'Object key to delete.'},
           },
           'required': ['serverId', 'key'],
@@ -58,8 +73,14 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
-            'folderPath': {'type': 'string', 'description': 'Folder prefix to delete.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
+            'folderPath': {
+              'type': 'string',
+              'description': 'Folder prefix to delete.',
+            },
           },
           'required': ['serverId', 'folderPath'],
         },
@@ -70,7 +91,10 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
             'oldKey': {'type': 'string', 'description': 'Existing object key.'},
             'newKey': {'type': 'string', 'description': 'New object key.'},
           },
@@ -83,7 +107,10 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
             'key': {'type': 'string', 'description': 'Object key.'},
           },
           'required': ['serverId', 'key'],
@@ -95,7 +122,10 @@ class McpService {
         inputSchema: {
           'type': 'object',
           'properties': {
-            'serverId': {'type': 'string', 'description': 'Configured server id.'},
+            'serverId': {
+              'type': 'string',
+              'description': 'Configured server id.',
+            },
           },
           'required': ['serverId'],
         },
@@ -103,7 +133,10 @@ class McpService {
     ];
   }
 
-  Future<McpToolResult> callTool(String name, Map<String, dynamic> arguments) async {
+  Future<McpToolResult> callTool(
+    String name,
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       switch (name) {
         case 'list_servers':
@@ -137,10 +170,16 @@ class McpService {
           (config) => {
             'id': config.id,
             'name': config.name,
+            'serverType': config.serverType,
             'address': config.address,
             'bucket': config.bucket,
             'region': config.region,
             'cdnUrl': config.cdnUrl,
+            'localPath': config.localPath,
+            'host': config.host,
+            'port': config.port,
+            'username': config.username,
+            'remotePath': config.remotePath,
           },
         )
         .toList();
@@ -150,7 +189,7 @@ class McpService {
   Future<McpToolResult> _listObjects(Map<String, dynamic> arguments) async {
     final config = await _getConfig(arguments);
     final prefix = arguments['prefix'] as String?;
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     final objects = await service.listObjects(prefix: prefix);
     final results = objects
         .map(
@@ -172,7 +211,7 @@ class McpService {
     if (folderPath == null || folderPath.isEmpty) {
       return _error('folderPath is required.');
     }
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     await service.createFolder(folderPath);
     return _success({'status': 'ok', 'folderPath': folderPath});
   }
@@ -183,7 +222,7 @@ class McpService {
     if (key == null || key.isEmpty) {
       return _error('key is required.');
     }
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     await service.deleteObject(key);
     return _success({'status': 'ok', 'key': key});
   }
@@ -194,7 +233,7 @@ class McpService {
     if (folderPath == null || folderPath.isEmpty) {
       return _error('folderPath is required.');
     }
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     await service.deleteFolder(folderPath);
     return _success({'status': 'ok', 'folderPath': folderPath});
   }
@@ -206,7 +245,7 @@ class McpService {
     if (oldKey == null || oldKey.isEmpty || newKey == null || newKey.isEmpty) {
       return _error('oldKey and newKey are required.');
     }
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     await service.renameObject(oldKey, newKey);
     return _success({'status': 'ok', 'oldKey': oldKey, 'newKey': newKey});
   }
@@ -217,14 +256,14 @@ class McpService {
     if (key == null || key.isEmpty) {
       return _error('key is required.');
     }
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     final url = service.getFileUrl(key);
     return _success({'url': url});
   }
 
   Future<McpToolResult> _testConnection(Map<String, dynamic> arguments) async {
     final config = await _getConfig(arguments);
-    final service = S3StorageService(config);
+    final service = StorageServiceFactory.create(config);
     await service.testConnection();
     return _success({'status': 'ok'});
   }
@@ -232,7 +271,9 @@ class McpService {
   Future<List<S3ServerConfig>> _loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
     final configs = prefs.getStringList(_serverConfigsKey) ?? [];
-    return configs.map((config) => S3ServerConfig.fromJson(json.decode(config))).toList();
+    return configs
+        .map((config) => S3ServerConfig.fromJson(json.decode(config)))
+        .toList();
   }
 
   Future<S3ServerConfig> _getConfig(Map<String, dynamic> arguments) async {

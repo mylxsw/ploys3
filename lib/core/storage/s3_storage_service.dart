@@ -110,6 +110,7 @@ class S3StorageService implements StorageService {
     await _minio.removeObject(bucketName, oldKey);
   }
 
+  @override
   Future<Stream<Uint8List>> downloadStream(String key) async {
     final stream = await _minio.getObject(bucketName, key);
     return stream.cast<Uint8List>();

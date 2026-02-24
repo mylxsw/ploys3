@@ -9,10 +9,7 @@ import 'package:ploys3/s3_config_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ploys3/widgets/window_title_bar.dart';
 
-enum ImageBedNamingRule {
-  original,
-  random,
-}
+enum ImageBedNamingRule { original, random }
 
 class ImageBedSettingsPage extends StatefulWidget {
   const ImageBedSettingsPage({super.key});
@@ -46,18 +43,23 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> serverConfigsStrings = prefs.getStringList('server_configs') ?? [];
+    final List<String> serverConfigsStrings =
+        prefs.getStringList('server_configs') ?? [];
     final servers = serverConfigsStrings
         .map((config) => S3ServerConfig.fromJson(json.decode(config)))
         .toList();
     final savedServerId = prefs.getString(_serverIdKey);
     final uploadDir = prefs.getString(_uploadDirKey) ?? '';
     final namingRule = prefs.getString(_namingRuleKey);
-    final rule = namingRule == 'random' ? ImageBedNamingRule.random : ImageBedNamingRule.original;
+    final rule = namingRule == 'random'
+        ? ImageBedNamingRule.random
+        : ImageBedNamingRule.original;
 
     setState(() {
       _servers = servers;
-      _selectedServerId = servers.any((s) => s.id == savedServerId) ? savedServerId : null;
+      _selectedServerId = servers.any((s) => s.id == savedServerId)
+          ? savedServerId
+          : null;
       _uploadDirController.text = uploadDir;
       _namingRule = rule;
     });
@@ -90,7 +92,10 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.loc('success')), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(context.loc('success')),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       Navigator.pop(context);
     }
@@ -99,7 +104,10 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
   Future<void> _openAddServer() async {
     await Navigator.push(
       context,
-      PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => S3ConfigPage(onSave: _loadSettings)),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            S3ConfigPage(onSave: _loadSettings),
+      ),
     );
     await _loadSettings();
   }
@@ -127,7 +135,10 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
                           TextButton.icon(
                             onPressed: _saveSettings,
                             label: Text(context.loc('save')),
-                            icon: Icon(Icons.save, color: Theme.of(context).colorScheme.primary),
+                            icon: Icon(
+                              Icons.save,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           const SizedBox(width: 12),
                         ],
@@ -159,19 +170,27 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off_outlined, size: 48, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 48,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(height: 16),
             Text(
               context.loc('image_bed_no_server_title'),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               context.loc('image_bed_no_server_desc'),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -192,21 +211,43 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
       children: [
         Text(
           context.loc('image_bed_choose_server'),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _selectedServerId,
+          initialValue: _selectedServerId,
+          isExpanded: true,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
             hintText: context.loc('image_bed_choose_server_hint'),
           ),
           items: _servers
               .map(
                 (server) => DropdownMenuItem<String>(
                   value: server.id,
-                  child: Text('${server.name} (${server.bucket})'),
+                  child: Text(
+                    '${server.name} (${_serverLabel(server)})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          selectedItemBuilder: (context) => _servers
+              .map(
+                (server) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${server.name} (${_serverLabel(server)})',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),
@@ -219,7 +260,9 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
         const SizedBox(height: 20),
         Text(
           context.loc('image_bed_upload_dir'),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -227,37 +270,41 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
           decoration: InputDecoration(
             hintText: context.loc('image_bed_upload_dir_hint'),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
           ),
           validator: _validateUploadDir,
         ),
         const SizedBox(height: 20),
         Text(
           context.loc('image_bed_naming_rule'),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        RadioListTile<ImageBedNamingRule>(
-          value: ImageBedNamingRule.original,
+        RadioGroup<ImageBedNamingRule>(
           groupValue: _namingRule,
-          title: Text(context.loc('image_bed_keep_original')),
-          onChanged: (value) async {
+          onChanged: (value) {
             if (value == null) return;
             setState(() {
               _namingRule = value;
             });
           },
-        ),
-        RadioListTile<ImageBedNamingRule>(
-          value: ImageBedNamingRule.random,
-          groupValue: _namingRule,
-          title: Text(context.loc('image_bed_random_name')),
-          onChanged: (value) async {
-            if (value == null) return;
-            setState(() {
-              _namingRule = value;
-            });
-          },
+          child: Column(
+            children: [
+              RadioListTile<ImageBedNamingRule>(
+                value: ImageBedNamingRule.original,
+                title: Text(context.loc('image_bed_keep_original')),
+              ),
+              RadioListTile<ImageBedNamingRule>(
+                value: ImageBedNamingRule.random,
+                title: Text(context.loc('image_bed_random_name')),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -270,6 +317,19 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
     value = value.replaceAll(RegExp(r'^/+'), '');
     value = value.replaceAll(RegExp(r'/+$'), '');
     return value;
+  }
+
+  String _serverLabel(S3ServerConfig server) {
+    switch (server.type) {
+      case ServerType.s3:
+        return server.bucket;
+      case ServerType.local:
+        return server.localPath;
+      case ServerType.ssh:
+      case ServerType.ftp:
+        final host = server.host.isNotEmpty ? server.host : server.address;
+        return '$host:${server.port > 0 ? server.port : ''}';
+    }
   }
 
   String? _validateUploadDir(String? value) {

@@ -645,6 +645,40 @@ class AppDelegate: FlutterAppDelegate, NSWindowDelegate, UNUserNotificationCente
         } else {
           result(FlutterError(code: "INVALID_ARGUMENT", message: "Expected file path string", details: nil))
         }
+      case "readClipboardImage":
+        let pasteboard = NSPasteboard.general
+        var pngData: Data? = nil
+
+        // Try PNG first
+        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType("public.png")) {
+          pngData = data
+        } else if let data = pasteboard.data(forType: .png) {
+          pngData = data
+        } else if let tiffData = pasteboard.data(forType: .tiff),
+                  let image = NSImage(data: tiffData) {
+          // Convert TIFF (common for screenshots) to PNG
+          if let tiffRep = image.tiffRepresentation,
+             let bitmapRep = NSBitmapImageRep(data: tiffRep) {
+            pngData = bitmapRep.representation(using: .png, properties: [:])
+          }
+        }
+
+        guard let data = pngData else {
+          result(nil)
+          break
+        }
+
+        let tempDir = NSTemporaryDirectory()
+        let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+        let fileName = "clipboard_image_\(timestamp).png"
+        let filePath = (tempDir as NSString).appendingPathComponent(fileName)
+
+        do {
+          try data.write(to: URL(fileURLWithPath: filePath))
+          result(filePath)
+        } catch {
+          result(nil)
+        }
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -20,6 +20,7 @@ import 'package:ploys3/widgets/upload_queue_ui.dart';
 import 'package:ploys3/widgets/download_queue_ui.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 import 'package:ploys3/core/storage/storage_service_factory.dart';
+import 'package:ploys3/core/clipboard_image_helper.dart';
 import 'package:ploys3/core/design_system.dart';
 
 String _basenameFromKey(String key) {
@@ -95,9 +96,25 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
   final Set<String> _selectedItems = {};
   bool _isSelectionMode = false;
 
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && Platform.isDesktop) {
+      final isPaste = (Platform.isMacOS &&
+              event.logicalKey == LogicalKeyboardKey.keyV &&
+              HardwareKeyboard.instance.isMetaPressed) ||
+          (!Platform.isMacOS &&
+              event.logicalKey == LogicalKeyboardKey.keyV &&
+              HardwareKeyboard.instance.isControlPressed);
+      if (isPaste) {
+        _handleClipboardPaste();
+      }
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
     try {
       _initializeService(); // This will now initialize _uploadManager too
     } catch (e) {
@@ -116,6 +133,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     MenuBarUploadCoordinator.instance.unregisterUploadContext(_uploadManager);
     super.dispose();
   }
@@ -775,6 +793,14 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
 
   // _uploadFileFromPath removed as it relies on blocking UI.
 
+  Future<void> _handleClipboardPaste() async {
+    if (!Platform.isDesktop) return;
+    if (_uploadManager == null) return;
+    final tempPath = await ClipboardImageHelper.readImageTempFile();
+    if (tempPath == null || !mounted) return;
+    _uploadManager!.addToQueue([tempPath], _currentPrefix);
+  }
+
   void _handleDragDone(DropDoneDetails details) async {
     setState(() {
       _isDragging = false;
@@ -984,10 +1010,10 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: _isSelectionMode
-            ? Text(context.loc('selected_count', [_selectedItems.length.toString()]))
-            : (Platform.isMobile ? _buildMobileDirectoryTitle() : _buildBreadcrumbBar(inAppBar: true)),
+        appBar: AppBar(
+          title: _isSelectionMode
+              ? Text(context.loc('selected_count', [_selectedItems.length.toString()]))
+              : (Platform.isMobile ? _buildMobileDirectoryTitle() : _buildBreadcrumbBar(inAppBar: true)),
         backgroundColor: Colors.transparent,
         leading: _buildHeaderLeading(context),
         leadingWidth: _headerLeadingWidth,

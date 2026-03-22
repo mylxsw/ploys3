@@ -24,6 +24,7 @@ import 'package:ploys3/core/upload_manager.dart';
 import 'package:ploys3/core/storage/storage_service_factory.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
 import 'package:path/path.dart' as p;
+import 'package:ploys3/core/clipboard_image_helper.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
 
 /// Method channel for macOS menu bar communication
@@ -354,9 +355,25 @@ class _AppShellState extends State<AppShell> {
   bool _isHoveringResizeHandle = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent && Platform.isDesktop && _selectedServerConfig == null) {
+      final isPaste = (Platform.isMacOS &&
+              event.logicalKey == LogicalKeyboardKey.keyV &&
+              HardwareKeyboard.instance.isMetaPressed) ||
+          (!Platform.isMacOS &&
+              event.logicalKey == LogicalKeyboardKey.keyV &&
+              HardwareKeyboard.instance.isControlPressed);
+      if (isPaste) {
+        _handleHomeClipboardPaste();
+      }
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
     _loadConfigs();
     McpSettingsManager.instance.initialize();
 
@@ -366,6 +383,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     // 清除回调
     if (onOpenSettingsCallback == _openSettingsPage) {
       onOpenSettingsCallback = null;
@@ -526,8 +544,8 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final useDrawer = Platform.isMobile;
+        builder: (context, constraints) {
+          final useDrawer = Platform.isMobile;
 
         // Auto-collapse if width is small
         if (!useDrawer && constraints.maxWidth < 600 && _isSidebarExtended) {
@@ -1356,6 +1374,21 @@ class _AppShellState extends State<AppShell> {
         .toList();
     if (paths.isEmpty) return;
     await onMenuBarFilesDropped(paths);
+  }
+
+  Future<void> _handleHomeClipboardPaste() async {
+    if (!Platform.isDesktop) return;
+    // Only handle paste on the home page (when no server is selected)
+    if (_selectedServerConfig != null) return;
+    final tempPath = await ClipboardImageHelper.readImageTempFile();
+    if (tempPath == null || !mounted) return;
+    final config = await _loadImageBedConfig();
+    if (!mounted) return;
+    if (config == null) {
+      await _promptConfigureImageBed();
+      return;
+    }
+    await _uploadImageBedFiles([tempPath], config);
   }
 }
 

@@ -261,6 +261,22 @@ class LanguageManager extends ChangeNotifier {
       'about': '关于',
       'version': '版本',
 
+      // 命令行工具
+      'cli_settings': '命令行工具',
+      'cli_install': '安装命令行工具',
+      'cli_install_desc': '将 ploys3 命令安装到 ~/.local/bin，可在终端中直接使用',
+      'cli_install_btn': '安装',
+      'cli_uninstall_btn': '卸载',
+      'cli_installed': '已安装',
+      'cli_install_success': '命令行工具安装成功！\n如果 ~/.local/bin 不在 PATH 中，请执行：\nexport PATH="\$HOME/.local/bin:\$PATH"',
+      'cli_install_failed': '安装失败：%s',
+      'cli_uninstall_success': '命令行工具已卸载',
+      'cli_not_available': '命令行工具未包含在当前应用中',
+      'cli_path': '命令行路径',
+      'cli_path_desc': '应用内置的命令行工具路径',
+      'cli_manual_install': '安装到 /usr/local/bin',
+      'cli_manual_install_desc': '在终端中执行以下命令：',
+
       // 错误信息
       'connection_error': '连接错误',
       'connection_failed_check':
@@ -573,6 +589,22 @@ class LanguageManager extends ChangeNotifier {
       'restore_confirm_btn': 'Restore now',
       'about': 'About',
       'version': 'Version',
+
+      // Command Line Tool
+      'cli_settings': 'Command Line Tool',
+      'cli_install': 'Install CLI',
+      'cli_install_desc': 'Install ploys3 command to ~/.local/bin for terminal usage',
+      'cli_install_btn': 'Install',
+      'cli_uninstall_btn': 'Uninstall',
+      'cli_installed': 'Installed',
+      'cli_install_success': 'CLI installed successfully!\nIf ~/.local/bin is not in PATH, run:\nexport PATH="\$HOME/.local/bin:\$PATH"',
+      'cli_install_failed': 'Install failed: %s',
+      'cli_uninstall_success': 'CLI uninstalled',
+      'cli_not_available': 'CLI not bundled in current app',
+      'cli_path': 'CLI Path',
+      'cli_path_desc': 'Path to the bundled CLI tool',
+      'cli_manual_install': 'Install to /usr/local/bin',
+      'cli_manual_install_desc': 'Run in terminal:',
 
       // Error messages
       'connection_error': 'Connection Error',

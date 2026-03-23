@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/core/localization.dart';
+import 'package:ploys3/core/config_exporter.dart';
 import 'package:ploys3/core/design_system.dart';
 
 import 'package:ploys3/widgets/window_title_bar.dart';
@@ -253,6 +254,8 @@ class _S3ConfigPageState extends State<S3ConfigPage> {
       }
 
       await prefs.setStringList('server_configs', serverConfigs);
+      // Export config for CLI tool
+      ConfigExporter.export();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

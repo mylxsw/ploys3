@@ -375,18 +375,17 @@ class UploadManager extends ChangeNotifier {
   Future<void> _ensureFileReadable(String filePath) async {
     if (!Platform.isMacOS) return;
     try {
-      final result = await _macFileAccessChannel.invokeMethod<dynamic>(
+      // Best-effort: try to acquire security-scoped access.
+      // If it fails, we still attempt the upload — the file may be
+      // readable without a bookmark (e.g. when passed by the CLI tool
+      // or located in an already-accessible directory).
+      await _macFileAccessChannel.invokeMethod<dynamic>(
         'ensureFileAccess',
         filePath,
       );
-      if (result is bool && result) return;
-      throw FileSystemException(
-        'Cannot access file in macOS sandbox',
-        filePath,
-      );
-    } on MissingPluginException {
-      // Fallback for environments where the macOS channel is unavailable.
-      return;
+    } catch (_) {
+      // Ignore all errors — the actual file read in uploadStream
+      // will produce a clear error if the file is truly inaccessible.
     }
   }
 }

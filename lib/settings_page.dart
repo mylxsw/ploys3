@@ -13,6 +13,7 @@ import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/mcp/mcp_settings_manager.dart';
 import 'package:ploys3/core/menubar_settings_manager.dart';
 import 'package:ploys3/models/s3_server_config.dart';
+import 'package:ploys3/core/cli_helper.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -502,6 +503,74 @@ class _SettingsPageState extends State<SettingsPage> {
 
         const SizedBox(height: 24),
 
+        // 命令行工具（仅桌面平台）
+        if (Platform.isDesktop) ...[
+          Text(
+            context.loc('cli_settings'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          _buildSettingCard(
+            icon: Icons.terminal,
+            title: context.loc('cli_install'),
+            subtitle: context.loc('cli_install_desc'),
+            trailing: _buildCliInstallButton(context),
+            isMobile: isMobile,
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildSettingCard(
+            icon: Icons.folder_open,
+            title: context.loc('cli_path'),
+            subtitle: CliHelper.bundledCliPath,
+            trailing: IconButton(
+              icon: const Icon(Icons.copy, size: 20),
+              tooltip: 'Copy',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: CliHelper.bundledCliPath));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Copied'),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            isMobile: isMobile,
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildSettingCard(
+            icon: Icons.content_copy,
+            title: context.loc('cli_manual_install'),
+            subtitle: context.loc('cli_manual_install_desc'),
+            trailing: IconButton(
+              icon: const Icon(Icons.copy, size: 20),
+              tooltip: 'Copy',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: CliHelper.manualInstallCommand));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Copied'),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            isMobile: isMobile,
+          ),
+
+          const SizedBox(height: 24),
+        ],
+
         Text(
           context.loc('backup_restore_settings'),
           style: Theme.of(
@@ -583,6 +652,60 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCliInstallButton(BuildContext context) {
+    final isInstalled = CliHelper.isCliInstalled;
+    if (isInstalled) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 20),
+          const SizedBox(width: 8),
+          Text(context.loc('cli_installed'),
+              style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () async {
+              final error = await CliHelper.uninstallCli();
+              if (!mounted) return;
+              if (error != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.loc('cli_install_failed').replaceFirst('%s', error)),
+                      behavior: SnackBarBehavior.floating),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.loc('cli_uninstall_success')),
+                      behavior: SnackBarBehavior.floating),
+                );
+                setState(() {});
+              }
+            },
+            child: Text(context.loc('cli_uninstall_btn')),
+          ),
+        ],
+      );
+    }
+    return FilledButton(
+      onPressed: () async {
+        final error = await CliHelper.installCli();
+        if (!mounted) return;
+        if (error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.loc('cli_install_failed').replaceFirst('%s', error)),
+                behavior: SnackBarBehavior.floating),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.loc('cli_install_success')),
+                behavior: SnackBarBehavior.floating),
+          );
+          setState(() {});
+        }
+      },
+      child: Text(context.loc('cli_install_btn')),
     );
   }
 

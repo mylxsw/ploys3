@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:ploys3/core/config_exporter.dart';
 import 'package:ploys3/core/design_system.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/models/s3_server_config.dart';
@@ -89,6 +90,9 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
       _namingRuleKey,
       _namingRule == ImageBedNamingRule.random ? 'random' : 'original',
     );
+
+    // Export config for CLI tool
+    ConfigExporter.export();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

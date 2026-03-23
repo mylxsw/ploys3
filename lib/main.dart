@@ -26,6 +26,7 @@ import 'package:ploys3/image_bed_settings_page.dart';
 import 'package:path/path.dart' as p;
 import 'package:ploys3/core/clipboard_image_helper.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
+import 'package:ploys3/core/config_exporter.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
@@ -415,6 +416,8 @@ class _AppShellState extends State<AppShell> {
         orElse: () => null,
       );
     });
+    // Export config for CLI tool
+    unawaited(ConfigExporter.export());
   }
 
   Future<void> _deleteServer(S3ServerConfig server) async {

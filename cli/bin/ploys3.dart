@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:ploys3_cli/config.dart';
+import 'package:ploys3_cli/upload_history.dart';
 import 'package:ploys3_cli/uploader.dart';
 
 void main(List<String> arguments) async {
@@ -11,22 +12,48 @@ void main(List<String> arguments) async {
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
     ..addFlag('version', negatable: false, help: 'Show version');
 
-  parser.addCommand('upload', ArgParser()
-    ..addOption('server', abbr: 's', help: 'Server name or ID (default: image bed server)')
-    ..addOption('prefix', abbr: 'p', help: 'Upload directory/prefix (default: from image bed config)')
-    ..addOption('naming', abbr: 'n', help: 'Naming rule: original|random (default: from config)',
-        allowed: ['original', 'random'])
-    ..addFlag('markdown', abbr: 'm', negatable: false, help: 'Output as Markdown image links')
-    ..addFlag('verbose', abbr: 'v', negatable: false, help: 'Verbose output')
-    ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
-    ..addOption('config', abbr: 'c', help: 'Config file path'));
+  parser.addCommand(
+    'upload',
+    ArgParser()
+      ..addOption(
+        'server',
+        abbr: 's',
+        help: 'Server name or ID (default: image bed server)',
+      )
+      ..addOption(
+        'prefix',
+        abbr: 'p',
+        help: 'Upload directory/prefix (default: from image bed config)',
+      )
+      ..addOption(
+        'naming',
+        abbr: 'n',
+        help: 'Naming rule: original|random (default: from config)',
+        allowed: ['original', 'random'],
+      )
+      ..addFlag(
+        'markdown',
+        abbr: 'm',
+        negatable: false,
+        help: 'Output as Markdown image links',
+      )
+      ..addFlag('verbose', abbr: 'v', negatable: false, help: 'Verbose output')
+      ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
+      ..addOption('config', abbr: 'c', help: 'Config file path'),
+  );
 
-  parser.addCommand('servers', ArgParser()
-    ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
-    ..addOption('config', abbr: 'c', help: 'Config file path'));
+  parser.addCommand(
+    'servers',
+    ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help')
+      ..addOption('config', abbr: 'c', help: 'Config file path'),
+  );
 
-  parser.addCommand('config', ArgParser()
-    ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help'));
+  parser.addCommand(
+    'config',
+    ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false, help: 'Show help'),
+  );
 
   ArgResults results;
   try {
@@ -79,10 +106,18 @@ void _printUsage(ArgParser parser) {
   stderr.writeln(parser.usage);
   stderr.writeln('');
   stderr.writeln('Examples:');
-  stderr.writeln('  ploys3 upload screenshot.png           Upload to image bed');
-  stderr.writeln('  ploys3 upload -m *.png                 Upload and output Markdown');
-  stderr.writeln('  ploys3 upload -s myserver file.zip     Upload to specific server');
-  stderr.writeln('  ploys3 upload -p blog/img/ photo.jpg   Upload to specific directory');
+  stderr.writeln(
+    '  ploys3 upload screenshot.png           Upload to image bed',
+  );
+  stderr.writeln(
+    '  ploys3 upload -m *.png                 Upload and output Markdown',
+  );
+  stderr.writeln(
+    '  ploys3 upload -s myserver file.zip     Upload to specific server',
+  );
+  stderr.writeln(
+    '  ploys3 upload -p blog/img/ photo.jpg   Upload to specific directory',
+  );
 }
 
 Future<void> _handleUpload(ArgResults args) async {
@@ -149,22 +184,32 @@ Future<void> _handleUpload(ArgResults args) async {
     server = config.imageBedServer;
     if (server == null) {
       stderr.writeln('Error: No image bed server configured.');
-      stderr.writeln('Please configure image bed in the PloyS3 app, or use -s to specify a server.');
+      stderr.writeln(
+        'Please configure image bed in the PloyS3 app, or use -s to specify a server.',
+      );
       exit(1);
     }
   }
 
   if (server.serverType != 's3') {
-    stderr.writeln('Error: CLI upload currently supports S3-compatible servers only.');
-    stderr.writeln('Server "${server.name}" is of type "${server.serverType}".');
+    stderr.writeln(
+      'Error: CLI upload currently supports S3-compatible servers only.',
+    );
+    stderr.writeln(
+      'Server "${server.name}" is of type "${server.serverType}".',
+    );
     exit(1);
   }
 
   // Determine prefix and naming rule
-  final prefix = args['prefix'] as String? ??
+  final prefix =
+      args['prefix'] as String? ??
       (serverQuery == null ? (config.imageBed?.uploadDir ?? '') : '');
-  final namingRule = args['naming'] as String? ??
-      (serverQuery == null ? (config.imageBed?.namingRule ?? 'original') : 'original');
+  final namingRule =
+      args['naming'] as String? ??
+      (serverQuery == null
+          ? (config.imageBed?.namingRule ?? 'original')
+          : 'original');
   final markdown = args['markdown'] as bool;
   final verbose = args['verbose'] as bool;
 
@@ -190,6 +235,16 @@ Future<void> _handleUpload(ArgResults args) async {
   var hasError = false;
   for (final result in results) {
     if (result.success) {
+      try {
+        await addUploadHistoryRecord(
+          filePath: result.filePath,
+          downloadUrl: result.url,
+          serverName: server.name,
+        );
+      } catch (e) {
+        stderr.writeln('Warning: Failed to record upload history: $e');
+      }
+
       if (markdown && isImageFile(result.filePath)) {
         final alt = p.basenameWithoutExtension(result.filePath);
         print('![$alt](${result.url})');
@@ -197,7 +252,9 @@ Future<void> _handleUpload(ArgResults args) async {
         print(result.url);
       }
     } else {
-      stderr.writeln('Failed: ${p.basename(result.filePath)} - ${result.error}');
+      stderr.writeln(
+        'Failed: ${p.basename(result.filePath)} - ${result.error}',
+      );
       hasError = true;
     }
   }
@@ -282,8 +339,12 @@ void _handleConfig(ArgResults args) {
       print('');
       print('Image Bed:');
       final server = config.imageBedServer;
-      print('  Server:  ${server?.name ?? 'Not found (${config.imageBed!.serverId})'}');
-      print('  Dir:     ${config.imageBed!.uploadDir.isEmpty ? '(root)' : config.imageBed!.uploadDir}');
+      print(
+        '  Server:  ${server?.name ?? 'Not found (${config.imageBed!.serverId})'}',
+      );
+      print(
+        '  Dir:     ${config.imageBed!.uploadDir.isEmpty ? '(root)' : config.imageBed!.uploadDir}',
+      );
       print('  Naming:  ${config.imageBed!.namingRule}');
     }
   } catch (e) {

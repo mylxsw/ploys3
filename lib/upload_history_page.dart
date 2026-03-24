@@ -21,7 +21,7 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _manager.loadHistory();
+    _manager.loadHistory(forceRefresh: true);
     _manager.addListener(_onChanged);
   }
 
@@ -42,10 +42,15 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
         title: Text(context.loc('clear_history_title')),
         content: Text(context.loc('clear_history_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(context.loc('clear_all')),
           ),
         ],
@@ -54,7 +59,9 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
       if (confirmed == true) {
         _manager.clearAll();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.loc('history_cleared'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.loc('history_cleared'))),
+          );
         }
       }
     });
@@ -62,7 +69,9 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
 
   void _deleteRecord(UploadHistoryRecord record) {
     _manager.deleteRecord(record.id);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.loc('record_deleted'))));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.loc('record_deleted'))));
   }
 
   void _handleCopy(UploadHistoryRecord record) {
@@ -70,7 +79,9 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
       _showCopyOptionsDialog(record);
     } else {
       Clipboard.setData(ClipboardData(text: record.downloadUrl));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.loc('url_copied'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.loc('url_copied'))));
     }
   }
 
@@ -80,38 +91,67 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(context.loc('copy_options'), style: Theme.of(context).textTheme.titleLarge),
+          title: Text(
+            context.loc('copy_options'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.link, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
-                title: Text(context.loc('copy_url'), style: Theme.of(context).textTheme.bodyMedium),
+                leading: Icon(
+                  Icons.link,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                title: Text(
+                  context.loc('copy_url'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: record.downloadUrl));
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(context.loc('url_copied'))));
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(context.loc('url_copied'))),
+                  );
                   Navigator.pop(dialogContext);
                 },
               ),
               const Divider(color: Colors.white24),
               ListTile(
-                leading: Icon(Icons.image, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
-                title: Text(context.loc('copy_markdown'), style: Theme.of(context).textTheme.bodyMedium),
+                leading: Icon(
+                  Icons.image,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                title: Text(
+                  context.loc('copy_markdown'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 onTap: () {
                   final nameWithoutExt = record.fileName.contains('.')
-                      ? record.fileName.substring(0, record.fileName.lastIndexOf('.'))
+                      ? record.fileName.substring(
+                          0,
+                          record.fileName.lastIndexOf('.'),
+                        )
                       : record.fileName;
                   final markdown = '![$nameWithoutExt](${record.downloadUrl})';
                   Clipboard.setData(ClipboardData(text: markdown));
-                  ScaffoldMessenger.of(
-                    dialogContext,
-                  ).showSnackBar(SnackBar(content: Text(context.loc('markdown_copied'))));
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(context.loc('markdown_copied'))),
+                  );
                   Navigator.pop(dialogContext);
                 },
               ),
             ],
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(context.loc('cancel')))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.loc('cancel')),
+            ),
+          ],
         );
       },
     );
@@ -197,14 +237,19 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.error,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       confirmDismiss: (_) async => true,
       onDismissed: (_) => _deleteRecord(record),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.3,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Material(
@@ -224,7 +269,11 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                       color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(_fileTypeIcon(record.fileType), color: theme.colorScheme.primary, size: 22),
+                    child: Icon(
+                      _fileTypeIcon(record.fileType),
+                      color: theme.colorScheme.primary,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // File info
@@ -234,7 +283,9 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                       children: [
                         Text(
                           record.fileName,
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -254,14 +305,18 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                             Icon(
                               Icons.cloud_outlined,
                               size: 12,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 record.serverName,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.5,
+                                  ),
                                   fontSize: AppFontSizes.xs,
                                 ),
                                 maxLines: 1,
@@ -272,13 +327,17 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                             Icon(
                               Icons.access_time,
                               size: 12,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               _formatTime(record.uploadTime),
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.5,
+                                ),
                                 fontSize: AppFontSizes.xs,
                               ),
                             ),
@@ -293,7 +352,13 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.copy, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                        icon: Icon(
+                          Icons.copy,
+                          size: 18,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
                         onPressed: () => _handleCopy(record),
                         tooltip: context.loc('copy_link'),
                         visualDensity: VisualDensity.compact,
@@ -302,7 +367,9 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
                         icon: Icon(
                           Icons.delete_outline,
                           size: 18,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                         onPressed: () => _deleteRecord(record),
                         tooltip: context.loc('delete'),

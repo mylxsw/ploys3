@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:ploys3/core/design_system.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/core/upload_manager.dart';
+import 'package:ploys3/models/upload_history_record.dart';
 
 class UploadQueueUI extends StatefulWidget {
   final UploadManager uploadManager;
@@ -16,6 +17,94 @@ class UploadQueueUI extends StatefulWidget {
 
 class _UploadQueueUIState extends State<UploadQueueUI> {
   bool _isExpanded = false;
+
+  bool _isImageFile(String fileName) {
+    final extension = fileName.contains('.')
+        ? fileName.substring(fileName.lastIndexOf('.') + 1)
+        : fileName;
+    return UploadHistoryRecord.detectFileType(extension) == 'image';
+  }
+
+  void _copyToClipboard(String text, String message) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showCopyOptionsDialog(UploadItem item) {
+    final url = item.resultUrl;
+    if (url == null || url.isEmpty) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            context.loc('copy_options'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.link,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                title: Text(
+                  context.loc('copy_url'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                onTap: () {
+                  _copyToClipboard(url, context.loc('url_copied'));
+                  Navigator.pop(dialogContext);
+                },
+              ),
+              const Divider(color: Colors.white24),
+              ListTile(
+                leading: Icon(
+                  Icons.image,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                title: Text(
+                  context.loc('copy_markdown'),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                onTap: () {
+                  final nameWithoutExt = item.fileName.contains('.')
+                      ? item.fileName.substring(0, item.fileName.lastIndexOf('.'))
+                      : item.fileName;
+                  final markdown = '![$nameWithoutExt]($url)';
+                  _copyToClipboard(markdown, context.loc('markdown_copied'));
+                  Navigator.pop(dialogContext);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(context.loc('cancel')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleCopy(UploadItem item) {
+    final url = item.resultUrl;
+    if (url == null || url.isEmpty) return;
+
+    if (_isImageFile(item.fileName)) {
+      _showCopyOptionsDialog(item);
+      return;
+    }
+
+    _copyToClipboard(url, context.loc('url_copied'));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +302,7 @@ class _UploadQueueUIState extends State<UploadQueueUI> {
         return IconButton(
           icon: const Icon(Icons.link),
           tooltip: context.loc('copy_link'),
-          onPressed: () {
-            if (item.resultUrl != null) {
-              Clipboard.setData(ClipboardData(text: item.resultUrl!));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.loc('url_copied'))),
-              );
-            }
-          },
+          onPressed: () => _handleCopy(item),
         );
       case UploadStatus.failed:
         return IconButton(

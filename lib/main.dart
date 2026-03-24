@@ -27,6 +27,7 @@ import 'package:path/path.dart' as p;
 import 'package:ploys3/core/clipboard_image_helper.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
 import 'package:ploys3/core/config_exporter.dart';
+import 'package:ploys3/upload_history_page.dart';
 
 /// Method channel for macOS menu bar communication
 const MethodChannel _menuBarChannel = MethodChannel('com.ploys3/menubar');
@@ -234,6 +235,7 @@ UploadManager _getOrCreateImageBedUploadManager(_ImageBedConfig config) {
   _imageBedUploadManager = UploadManager(
     service: service,
     cdnUrl: config.server.cdnUrl,
+    serverName: config.server.name,
   );
   _imageBedUploadServerId = serverId;
   _imageBedUploadManagerNotifier.value = _imageBedUploadManager;
@@ -990,12 +992,51 @@ class _AppShellState extends State<AppShell> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                // Upload History Button
+                Container(
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        onDrawerClose?.call();
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const UploadHistoryPage(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: isSidebarExtended
+                            ? Row(
+                                children: [
+                                  Icon(Icons.history, size: 20),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      context.loc('history'),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Icon(Icons.history, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
                 // Settings Button
                 Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
-                  ),
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -1017,7 +1058,6 @@ class _AppShellState extends State<AppShell> {
                         padding: const EdgeInsets.all(12),
                         child: isSidebarExtended
                             ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.settings_outlined, size: 20),
                                   const SizedBox(width: 12),
@@ -1026,14 +1066,14 @@ class _AppShellState extends State<AppShell> {
                                       context.loc('settings'),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
                                 ],
                               )
-                            : Icon(Icons.settings_outlined, size: 24),
+                            : const Icon(Icons.settings_outlined, size: 24),
                       ),
                     ),
                   ),

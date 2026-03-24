@@ -82,7 +82,9 @@ class S3StorageService implements StorageService {
 
   @override
   Future<void> deleteObject(String key) async {
-    await _minio.removeObject(bucketName, key);
+    // Use removeObjects (XML body) instead of removeObject (URL path)
+    // to handle keys with special characters like <, >, .., \
+    await _minio.removeObjects(bucketName, [key]);
   }
 
   @override
@@ -92,15 +94,24 @@ class S3StorageService implements StorageService {
         ? folderPath
         : '$folderPath/';
 
-    final stream = _minio.listObjects(bucketName, prefix: normalizedFolderKey);
+    // Use recursive: true to list ALL objects under this prefix
+    // (including nested subdirectories)
+    final stream = _minio.listObjects(bucketName, prefix: normalizedFolderKey, recursive: true);
     final results = await stream.toList();
 
+    final keysToDelete = <String>[];
     for (final result in results) {
       for (final obj in result.objects) {
         if (obj.key != null) {
-          await _minio.removeObject(bucketName, obj.key!);
+          keysToDelete.add(obj.key!);
         }
       }
+    }
+
+    // Use removeObjects (XML body) instead of removeObject (URL path)
+    // to handle keys with special characters like <, >, .., \
+    if (keysToDelete.isNotEmpty) {
+      await _minio.removeObjects(bucketName, keysToDelete);
     }
   }
 

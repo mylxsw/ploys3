@@ -221,6 +221,7 @@ class _S3BrowserPageState extends State<S3BrowserPage> {
       _uploadManager = UploadManager(
         service: _storageService,
         cdnUrl: widget.serverConfig.cdnUrl,
+        serverName: widget.serverConfig.name,
         onUploadComplete: () {
           // Refresh file list after upload completes
           _clearCache();

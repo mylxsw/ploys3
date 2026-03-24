@@ -139,12 +139,19 @@ class _SettingsPageState extends State<SettingsPage> {
         'exportedAt': DateTime.now().toUtc().toIso8601String(),
         'serverConfigs': serverConfigs,
       };
-      final bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(backupPayload)));
+      final bytes = Uint8List.fromList(
+        utf8.encode(const JsonEncoder.withIndent('  ').convert(backupPayload)),
+      );
       final now = DateTime.now();
       final fileName =
           'ploys3-backup-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
 
-      await FileSaver.instance.saveAs(name: fileName, bytes: bytes, ext: 'ploys3', mimeType: MimeType.json);
+      await FileSaver.instance.saveAs(
+        name: fileName,
+        bytes: bytes,
+        ext: 'ploys3',
+        mimeType: MimeType.json,
+      );
 
       _showMessage(backupSuccessMessage);
     } catch (_) {
@@ -162,8 +169,14 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_isRestoring) return;
     final restoreSuccessMessage = context.loc('restore_success');
     final restoreFailedMessage = context.loc('restore_failed');
-    final restoreInvalidExtensionMessage = context.loc('restore_invalid_extension');
-    final result = await FilePicker.platform.pickFiles(allowMultiple: false, withData: true, type: FileType.any);
+    final restoreInvalidExtensionMessage = context.loc(
+      'restore_invalid_extension',
+    );
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.any,
+    );
 
     if (result == null || result.files.isEmpty) {
       return;
@@ -182,8 +195,14 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Text(context.loc('restore_confirm_title')),
         content: Text(context.loc('restore_confirm_desc')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.loc('cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.loc('restore_confirm_btn'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.loc('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.loc('restore_confirm_btn')),
+          ),
         ],
       ),
     );
@@ -244,7 +263,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobilePlatform = const [TargetPlatform.iOS, TargetPlatform.android].contains(defaultTargetPlatform);
+    final isMobilePlatform = const [
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+    ].contains(defaultTargetPlatform);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -268,7 +290,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 600),
-                      child: _buildSettingsContent(context, isMobile: isMobilePlatform),
+                      child: _buildSettingsContent(
+                        context,
+                        isMobile: isMobilePlatform,
+                      ),
                     ),
                   ),
                 ),
@@ -287,9 +312,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 外观设置
         Text(
           context.loc('appearance_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -298,7 +324,9 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Icons.dark_mode_outlined,
           title: context.loc('dark_mode'),
           subtitle: _getThemeModeDescription(),
-          trailing: isMobile ? _buildThemeDropdown(context) : _buildThemeSegmentedButton(),
+          trailing: isMobile
+              ? _buildThemeDropdown(context)
+              : _buildThemeSegmentedButton(),
           isMobile: isMobile,
         ),
 
@@ -307,9 +335,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 语言设置
         Text(
           context.loc('language_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -334,19 +363,30 @@ class _SettingsPageState extends State<SettingsPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           for (final language in AppLanguage.values)
-                            RadioListTile<AppLanguage>(title: Text(language.displayName), value: language),
+                            RadioListTile<AppLanguage>(
+                              title: Text(language.displayName),
+                              value: language,
+                            ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.loc('cancel_btn')))],
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(context.loc('cancel_btn')),
+                  ),
+                ],
               ),
             );
           },
           child: Row(
             children: [
-              Icon(Icons.language, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.language,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -354,12 +394,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('language'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _selectedLanguage.displayName,
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -367,7 +413,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -390,7 +438,10 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.menu,
             title: context.loc('menubar_enable'),
             subtitle: context.loc('menubar_enable_desc'),
-            trailing: Switch.adaptive(value: _menuBarEnabled, onChanged: _setMenuBarEnabled),
+            trailing: Switch.adaptive(
+              value: _menuBarEnabled,
+              onChanged: _setMenuBarEnabled,
+            ),
             isMobile: isMobile,
           ),
 
@@ -416,9 +467,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // MCP 设置
         Text(
           context.loc('mcp_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -426,7 +478,10 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Icons.hub_outlined,
           title: context.loc('mcp_enable'),
           subtitle: context.loc('mcp_enable_desc'),
-          trailing: Switch.adaptive(value: _mcpEnabled, onChanged: _setMcpEnabled),
+          trailing: Switch.adaptive(
+            value: _mcpEnabled,
+            onChanged: _setMcpEnabled,
+          ),
           isMobile: isMobile,
         ),
 
@@ -459,9 +514,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 图床设置
         Text(
           context.loc('image_bed_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -469,12 +525,18 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: () {
             Navigator.push(
               context,
-              PageRouteBuilder(pageBuilder: (context, animation, secondaryAnimation) => const ImageBedSettingsPage()),
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const ImageBedSettingsPage(),
+              ),
             );
           },
           child: Row(
             children: [
-              Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.image_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -482,12 +544,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('image_bed'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       context.loc('image_bed_settings_desc'),
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -495,7 +563,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -527,35 +597,14 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSettingCard(
             icon: Icons.folder_open,
             title: context.loc('cli_path'),
-            subtitle: CliHelper.bundledCliPath,
+            subtitle: CliHelper.effectiveCliPath,
             trailing: IconButton(
               icon: const Icon(Icons.copy, size: 20),
               tooltip: 'Copy',
               onPressed: () {
-                Clipboard.setData(ClipboardData(text: CliHelper.bundledCliPath));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Copied'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 1),
-                  ),
+                Clipboard.setData(
+                  ClipboardData(text: CliHelper.effectiveCliPath),
                 );
-              },
-            ),
-            isMobile: isMobile,
-          ),
-
-          const SizedBox(height: 12),
-
-          _buildSettingCard(
-            icon: Icons.content_copy,
-            title: context.loc('cli_manual_install'),
-            subtitle: context.loc('cli_manual_install_desc'),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy, size: 20),
-              tooltip: 'Copy',
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: CliHelper.manualInstallCommand));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Copied'),
@@ -573,9 +622,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
         Text(
           context.loc('backup_restore_settings'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -608,9 +658,10 @@ class _SettingsPageState extends State<SettingsPage> {
         // 关于
         Text(
           context.loc('about'),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -625,7 +676,10 @@ class _SettingsPageState extends State<SettingsPage> {
           },
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.info_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -633,12 +687,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       context.loc('version'),
-                      style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: AppFontSizes.lg,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '1.0.0',
-                      style: TextStyle(fontSize: AppFontSizes.md, color: Theme.of(context).textTheme.bodySmall?.color),
+                      style: TextStyle(
+                        fontSize: AppFontSizes.md,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -646,7 +706,9 @@ class _SettingsPageState extends State<SettingsPage> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -663,22 +725,34 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Icon(Icons.check_circle, color: Colors.green, size: 20),
           const SizedBox(width: 8),
-          Text(context.loc('cli_installed'),
-              style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500)),
+          Text(
+            context.loc('cli_installed'),
+            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500),
+          ),
           const SizedBox(width: 8),
           TextButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final installFailedTemplate = context.loc('cli_install_failed');
+              final uninstallSuccess = context.loc('cli_uninstall_success');
+
               final error = await CliHelper.uninstallCli();
               if (!mounted) return;
               if (error != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.loc('cli_install_failed').replaceFirst('%s', error)),
-                      behavior: SnackBarBehavior.floating),
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      installFailedTemplate.replaceFirst('%s', error),
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.loc('cli_uninstall_success')),
-                      behavior: SnackBarBehavior.floating),
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(uninstallSuccess),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
                 setState(() {});
               }
@@ -690,17 +764,25 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     return FilledButton(
       onPressed: () async {
+        final messenger = ScaffoldMessenger.of(context);
+        final installFailedTemplate = context.loc('cli_install_failed');
+        final installSuccess = context.loc('cli_install_success');
+
         final error = await CliHelper.installCli();
         if (!mounted) return;
         if (error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.loc('cli_install_failed').replaceFirst('%s', error)),
-                behavior: SnackBarBehavior.floating),
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(installFailedTemplate.replaceFirst('%s', error)),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.loc('cli_install_success')),
-                behavior: SnackBarBehavior.floating),
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(installSuccess),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
           setState(() {});
         }
@@ -720,9 +802,18 @@ class _SettingsPageState extends State<SettingsPage> {
           }
         },
         items: [
-          DropdownMenuItem(value: AppThemeMode.light, child: Text(context.loc('theme_light'))),
-          DropdownMenuItem(value: AppThemeMode.system, child: Text(context.loc('theme_system'))),
-          DropdownMenuItem(value: AppThemeMode.dark, child: Text(context.loc('theme_dark'))),
+          DropdownMenuItem(
+            value: AppThemeMode.light,
+            child: Text(context.loc('theme_light')),
+          ),
+          DropdownMenuItem(
+            value: AppThemeMode.system,
+            child: Text(context.loc('theme_system')),
+          ),
+          DropdownMenuItem(
+            value: AppThemeMode.dark,
+            child: Text(context.loc('theme_dark')),
+          ),
         ],
       ),
     );
@@ -777,10 +868,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                      child: Icon(
+                        icon,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -789,14 +886,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: AppFontSizes.lg,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
                             style: TextStyle(
                               fontSize: AppFontSizes.md,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ],
@@ -812,10 +914,16 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                  child: Icon(
+                    icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -824,7 +932,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: AppFontSizes.lg,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -862,7 +973,10 @@ class _SettingsPageState extends State<SettingsPage> {
         hintText: subtitle,
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
       ),
       onChanged: onChanged,
     );
@@ -876,10 +990,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                      child: Icon(
+                        icon,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -888,14 +1008,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: AppFontSizes.lg,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
                             style: TextStyle(
                               fontSize: AppFontSizes.md,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ],
@@ -911,10 +1036,16 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
+                  child: Icon(
+                    icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -923,7 +1054,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: AppFontSizes.lg, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: AppFontSizes.lg,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(

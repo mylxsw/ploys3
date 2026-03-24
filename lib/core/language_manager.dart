@@ -268,14 +268,13 @@ class LanguageManager extends ChangeNotifier {
       'cli_install_btn': '安装',
       'cli_uninstall_btn': '卸载',
       'cli_installed': '已安装',
-      'cli_install_success': '命令行工具安装成功！\n如果 ~/.local/bin 不在 PATH 中，请执行：\nexport PATH="\$HOME/.local/bin:\$PATH"',
+      'cli_install_success':
+          '命令行工具安装成功！\n如果 ~/.local/bin 不在 PATH 中，请执行：\nexport PATH="\$HOME/.local/bin:\$PATH"',
       'cli_install_failed': '安装失败：%s',
       'cli_uninstall_success': '命令行工具已卸载',
       'cli_not_available': '命令行工具未包含在当前应用中',
       'cli_path': '命令行路径',
-      'cli_path_desc': '应用内置的命令行工具路径',
-      'cli_manual_install': '安装到 /usr/local/bin',
-      'cli_manual_install_desc': '在终端中执行以下命令：',
+      'cli_path_desc': '当前可用的命令行路径',
 
       // 错误信息
       'connection_error': '连接错误',
@@ -381,6 +380,17 @@ class LanguageManager extends ChangeNotifier {
       'r2_validation_sk': '需要秘密访问密钥',
       'r2_validation_bucket': '需要存储桶名称',
       'r2_validation_scheme': 'URL 必须包含 http:// 或 https://',
+
+      // Upload History
+      'history': '历史',
+      'upload_history': '上传历史',
+      'clear_all': '清空全部',
+      'clear_history_title': '清空上传历史',
+      'clear_history_confirm': '确定要清空所有上传历史记录吗？',
+      'no_upload_history': '暂无上传记录',
+      'no_upload_history_hint': '上传文件后会在这里显示记录',
+      'history_cleared': '已清空上传历史',
+      'record_deleted': '已删除记录',
     },
     AppLanguage.english: {
       // Common
@@ -593,18 +603,18 @@ class LanguageManager extends ChangeNotifier {
       // Command Line Tool
       'cli_settings': 'Command Line Tool',
       'cli_install': 'Install CLI',
-      'cli_install_desc': 'Install ploys3 command to ~/.local/bin for terminal usage',
+      'cli_install_desc':
+          'Install ploys3 command to ~/.local/bin for terminal usage',
       'cli_install_btn': 'Install',
       'cli_uninstall_btn': 'Uninstall',
       'cli_installed': 'Installed',
-      'cli_install_success': 'CLI installed successfully!\nIf ~/.local/bin is not in PATH, run:\nexport PATH="\$HOME/.local/bin:\$PATH"',
+      'cli_install_success':
+          'CLI installed successfully!\nIf ~/.local/bin is not in PATH, run:\nexport PATH="\$HOME/.local/bin:\$PATH"',
       'cli_install_failed': 'Install failed: %s',
       'cli_uninstall_success': 'CLI uninstalled',
       'cli_not_available': 'CLI not bundled in current app',
       'cli_path': 'CLI Path',
-      'cli_path_desc': 'Path to the bundled CLI tool',
-      'cli_manual_install': 'Install to /usr/local/bin',
-      'cli_manual_install_desc': 'Run in terminal:',
+      'cli_path_desc': 'Current CLI command path',
 
       // Error messages
       'connection_error': 'Connection Error',
@@ -716,6 +726,19 @@ class LanguageManager extends ChangeNotifier {
       'r2_validation_sk': 'Secret Access Key is required',
       'r2_validation_bucket': 'Bucket name is required',
       'r2_validation_scheme': 'URL must include http:// or https://',
+
+      // Upload History
+      'history': 'History',
+      'upload_history': 'Upload History',
+      'clear_all': 'Clear All',
+      'clear_history_title': 'Clear Upload History',
+      'clear_history_confirm':
+          'Are you sure you want to clear all upload history?',
+      'no_upload_history': 'No upload history',
+      'no_upload_history_hint':
+          'Upload history will appear here after uploading files',
+      'history_cleared': 'Upload history cleared',
+      'record_deleted': 'Record deleted',
     },
   };
 }

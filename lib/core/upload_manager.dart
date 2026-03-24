@@ -9,6 +9,8 @@ import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
+import 'package:ploys3/core/upload_history_manager.dart';
+import 'package:ploys3/models/upload_history_record.dart';
 
 const MethodChannel _macFileAccessChannel = MethodChannel('com.ploys3/menubar');
 
@@ -55,6 +57,7 @@ class UploadManager extends ChangeNotifier {
   final List<UploadItem> _queue = [];
   final StorageService _service;
   final String? _cdnUrl;
+  final String serverName;
   final VoidCallback? onUploadComplete;
 
   bool _isProcessing = false;
@@ -63,6 +66,7 @@ class UploadManager extends ChangeNotifier {
   UploadManager({
     required StorageService service,
     String? cdnUrl,
+    this.serverName = '',
     this.onUploadComplete,
   }) : _service = service,
        _cdnUrl = cdnUrl;
@@ -179,6 +183,8 @@ class UploadManager extends ChangeNotifier {
           item.status = UploadStatus.success;
           item.progress = 1.0;
           item.resultUrl = _buildFileUrl(item.targetKey);
+          // Save upload history
+          _saveUploadHistory(item);
           // Trigger callback to refresh file list
           onUploadComplete?.call();
         } catch (e) {
@@ -195,6 +201,23 @@ class UploadManager extends ChangeNotifier {
         _markInactive();
       }
     }
+  }
+
+  void _saveUploadHistory(UploadItem item) {
+    final dotIndex = item.originalFileName.lastIndexOf('.');
+    final extension = dotIndex > 0
+        ? item.originalFileName.substring(dotIndex)
+        : '';
+    final record = UploadHistoryRecord(
+      id: '${DateTime.now().millisecondsSinceEpoch}_${item.fileName}',
+      fileName: item.originalFileName,
+      fileExtension: extension,
+      fileType: UploadHistoryRecord.detectFileType(extension),
+      downloadUrl: item.resultUrl ?? _buildFileUrl(item.targetKey),
+      serverName: serverName,
+      uploadTime: DateTime.now().toIso8601String(),
+    );
+    UploadHistoryManager.instance.addRecord(record);
   }
 
   String _buildFileUrl(String key) {

@@ -4,10 +4,32 @@ import 'package:path/path.dart' as p;
 
 /// Helper for locating and installing the bundled CLI tool.
 class CliHelper {
+  /// Returns the real user home directory on macOS.
+  ///
+  /// Sandboxed apps may see HOME as a container path like:
+  /// /Users/username/Library/Containers/app-bundle-id/Data
+  ///
+  /// For CLI installation we want the actual user home, e.g. /Users/username.
+  static String get userHomePath {
+    final home = Platform.environment['HOME'] ?? '';
+
+    if (Platform.isMacOS && home.contains('/Library/Containers/')) {
+      final user =
+          Platform.environment['USER'] ?? Platform.environment['LOGNAME'] ?? '';
+      if (user.isNotEmpty) {
+        final realHome = p.join('/Users', user);
+        if (Directory(realHome).existsSync()) {
+          return realHome;
+        }
+      }
+    }
+
+    return home;
+  }
+
   /// Install to ~/.local/bin (user-writable, no admin needed).
   static String get defaultInstallPath {
-    final home = Platform.environment['HOME'] ?? '';
-    return p.join(home, '.local', 'bin', 'ploys3');
+    return p.join(userHomePath, '.local', 'bin', 'ploys3');
   }
 
   /// Returns the path to the CLI executable inside the app bundle.
@@ -24,17 +46,20 @@ class CliHelper {
   /// Whether the CLI binary exists in the app bundle.
   static bool get isCliAvailable => File(bundledCliPath).existsSync();
 
-  /// Whether the CLI is installed at the default path.
-  static bool get isCliInstalled {
-    try {
-      final link = Link(defaultInstallPath);
-      if (!link.existsSync()) return false;
-      final target = link.targetSync();
-      return target == bundledCliPath;
-    } catch (_) {
-      return false;
-    }
-  }
+  /// Whether a CLI entry already exists in ~/.local/bin.
+  static bool get hasLocalCliInstall =>
+      FileSystemEntity.typeSync(defaultInstallPath) !=
+      FileSystemEntityType.notFound;
+
+  /// The path users should use in the terminal.
+  ///
+  /// - If ~/.local/bin/ploys3 already exists, prefer that path.
+  /// - Otherwise show the bundled app path.
+  static String get effectiveCliPath =>
+      hasLocalCliInstall ? defaultInstallPath : bundledCliPath;
+
+  /// Whether the CLI is available for terminal use.
+  static bool get isCliInstalled => hasLocalCliInstall;
 
   /// Install the CLI by creating a symlink at ~/.local/bin/ploys3.
   /// Returns null on success, or an error message on failure.
@@ -54,10 +79,10 @@ class CliHelper {
       }
 
       // Remove existing file/link if present
-      final existing = Link(target);
-      if (existing.existsSync()) {
-        existing.deleteSync();
-      } else if (File(target).existsSync()) {
+      final existingType = FileSystemEntity.typeSync(target);
+      if (existingType == FileSystemEntityType.link) {
+        Link(target).deleteSync();
+      } else if (existingType == FileSystemEntityType.file) {
         File(target).deleteSync();
       }
 
@@ -69,20 +94,19 @@ class CliHelper {
     }
   }
 
-  /// Uninstall the CLI symlink.
+  /// Uninstall the CLI entry from ~/.local/bin.
   static Future<String?> uninstallCli() async {
     try {
-      final link = Link(defaultInstallPath);
-      if (link.existsSync()) {
-        link.deleteSync();
+      final target = defaultInstallPath;
+      final existingType = FileSystemEntity.typeSync(target);
+      if (existingType == FileSystemEntityType.link) {
+        Link(target).deleteSync();
+      } else if (existingType == FileSystemEntityType.file) {
+        File(target).deleteSync();
       }
       return null;
     } catch (e) {
       return e.toString();
     }
   }
-
-  /// The sudo command users can run to install to /usr/local/bin instead.
-  static String get manualInstallCommand =>
-      'sudo ln -sf "$bundledCliPath" /usr/local/bin/ploys3';
 }

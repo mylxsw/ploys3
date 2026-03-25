@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:ploys3/core/config_exporter.dart';
 import 'package:ploys3/core/design_system.dart';
+import 'package:ploys3/core/image_bed_path_template.dart';
 import 'package:ploys3/core/localization.dart';
 import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/s3_config_page.dart';
@@ -281,6 +282,17 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
           ),
           validator: _validateUploadDir,
         ),
+        const SizedBox(height: 8),
+        Text(
+          context.loc('image_bed_path_template_help', [
+            ImageBedPathTemplate.supportedVariables.join(', '),
+          ]),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
         const SizedBox(height: 20),
         Text(
           context.loc('image_bed_naming_rule'),
@@ -319,7 +331,7 @@ class _ImageBedSettingsPageState extends State<ImageBedSettingsPage> {
     if (value.isEmpty) return '';
     value = value.replaceAll('\\', '/');
     value = value.replaceAll(RegExp(r'^/+'), '');
-    value = value.replaceAll(RegExp(r'/+$'), '');
+    value = value.replaceAll(RegExp(r'/+'), '/');
     return value;
   }
 

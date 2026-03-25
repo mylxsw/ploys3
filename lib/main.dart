@@ -20,10 +20,10 @@ import 'package:ploys3/core/menubar_settings_manager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:ploys3/core/image_bed_path_template.dart';
 import 'package:ploys3/core/upload_manager.dart';
 import 'package:ploys3/core/storage/storage_service_factory.dart';
 import 'package:ploys3/image_bed_settings_page.dart';
-import 'package:path/path.dart' as p;
 import 'package:ploys3/core/clipboard_image_helper.dart';
 import 'package:ploys3/widgets/upload_queue_ui.dart';
 import 'package:ploys3/core/config_exporter.dart';
@@ -193,37 +193,14 @@ Future<void> _uploadImageBedFiles(
   _ImageBedConfig config,
 ) async {
   final uploadManager = _getOrCreateImageBedUploadManager(config);
-
-  final targetPrefix = _normalizeUploadPrefix(config.uploadDir);
-  uploadManager.addToQueueWithNameResolver(
+  uploadManager.addToQueueWithTargetResolver(
     filePaths,
-    targetPrefix,
-    (path) => _resolveImageBedFileName(path, config.namingRule),
+    (path) => ImageBedPathTemplate.resolve(
+      path,
+      pathTemplate: config.uploadDir,
+      namingRule: config.namingRule,
+    ),
   );
-}
-
-String _normalizeUploadPrefix(String uploadDir) {
-  if (uploadDir.isEmpty) return '';
-  return uploadDir.endsWith('/') ? uploadDir : '$uploadDir/';
-}
-
-String _resolveImageBedFileName(
-  String filePath,
-  ImageBedNamingRule namingRule,
-) {
-  final originalName = p.basename(filePath);
-  if (namingRule == ImageBedNamingRule.original) {
-    return originalName;
-  }
-
-  final dotIndex = originalName.lastIndexOf('.');
-  final extension = dotIndex > 0 ? originalName.substring(dotIndex) : '';
-  final now = DateTime.now();
-  final timestamp =
-      '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
-  final uuid =
-      '${math.Random().nextInt(0x7FFFFFFF).toRadixString(36)}-${math.Random().nextInt(0x7FFFFFFF).toRadixString(36)}';
-  return '$timestamp-$uuid$extension';
 }
 
 UploadManager _getOrCreateImageBedUploadManager(_ImageBedConfig config) {
@@ -359,8 +336,11 @@ class _AppShellState extends State<AppShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   bool _onKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent && Platform.isDesktop && _selectedServerConfig == null) {
-      final isPaste = (Platform.isMacOS &&
+    if (event is KeyDownEvent &&
+        Platform.isDesktop &&
+        _selectedServerConfig == null) {
+      final isPaste =
+          (Platform.isMacOS &&
               event.logicalKey == LogicalKeyboardKey.keyV &&
               HardwareKeyboard.instance.isMetaPressed) ||
           (!Platform.isMacOS &&
@@ -549,8 +529,8 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-        builder: (context, constraints) {
-          final useDrawer = Platform.isMobile;
+      builder: (context, constraints) {
+        final useDrawer = Platform.isMobile;
 
         // Auto-collapse if width is small
         if (!useDrawer && constraints.maxWidth < 600 && _isSidebarExtended) {

@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:minio/minio.dart';
 import 'package:path/path.dart' as p;
 
 import 'config.dart';
+import 'path_template.dart';
 
 /// Creates a Minio client from server config
 Minio createMinioClient(ServerConfig config) {
@@ -41,34 +41,6 @@ String buildFileUrl(ServerConfig config, String key) {
   return '$baseUrl/$key';
 }
 
-/// Generate a random filename based on naming rule
-String resolveFileName(String filePath, String namingRule) {
-  final originalName = p.basename(filePath);
-  if (namingRule == 'original') return originalName;
-
-  final dotIndex = originalName.lastIndexOf('.');
-  final extension = dotIndex > 0 ? originalName.substring(dotIndex) : '';
-  final now = DateTime.now();
-  final timestamp =
-      '${now.year}'
-      '${now.month.toString().padLeft(2, '0')}'
-      '${now.day.toString().padLeft(2, '0')}-'
-      '${now.hour.toString().padLeft(2, '0')}'
-      '${now.minute.toString().padLeft(2, '0')}'
-      '${now.second.toString().padLeft(2, '0')}';
-  final rand = math.Random();
-  final uuid =
-      '${rand.nextInt(0x7FFFFFFF).toRadixString(36)}-'
-      '${rand.nextInt(0x7FFFFFFF).toRadixString(36)}';
-  return '$timestamp-$uuid$extension';
-}
-
-/// Normalize upload prefix (ensure trailing slash)
-String normalizePrefix(String prefix) {
-  if (prefix.isEmpty) return '';
-  return prefix.endsWith('/') ? prefix : '$prefix/';
-}
-
 /// Upload result
 class UploadResult {
   final String filePath;
@@ -90,29 +62,34 @@ class UploadResult {
 Future<List<UploadResult>> uploadFiles({
   required ServerConfig server,
   required List<String> filePaths,
-  required String prefix,
+  required String pathTemplate,
   required String namingRule,
   bool verbose = false,
 }) async {
   final client = createMinioClient(server);
-  final normalizedPrefix = normalizePrefix(prefix);
   final results = <UploadResult>[];
 
   for (final filePath in filePaths) {
     final file = File(filePath);
     if (!file.existsSync()) {
-      results.add(UploadResult(
-        filePath: filePath,
-        key: '',
-        url: '',
-        success: false,
-        error: 'File not found',
-      ));
+      results.add(
+        UploadResult(
+          filePath: filePath,
+          key: '',
+          url: '',
+          success: false,
+          error: 'File not found',
+        ),
+      );
       continue;
     }
 
-    final fileName = resolveFileName(filePath, namingRule);
-    final key = normalizedPrefix.isEmpty ? fileName : '$normalizedPrefix$fileName';
+    final target = resolveUploadTarget(
+      filePath: filePath,
+      pathTemplate: pathTemplate,
+      namingRule: namingRule,
+    );
+    final key = target.key;
     final url = buildFileUrl(server, key);
 
     if (verbose) {
@@ -124,24 +101,23 @@ Future<List<UploadResult>> uploadFiles({
       final size = await file.length();
       await client.putObject(server.bucket, key, stream, size: size);
 
-      results.add(UploadResult(
-        filePath: filePath,
-        key: key,
-        url: url,
-        success: true,
-      ));
+      results.add(
+        UploadResult(filePath: filePath, key: key, url: url, success: true),
+      );
 
       if (verbose) {
         stderr.writeln('  ✓ $url');
       }
     } catch (e) {
-      results.add(UploadResult(
-        filePath: filePath,
-        key: key,
-        url: url,
-        success: false,
-        error: e.toString(),
-      ));
+      results.add(
+        UploadResult(
+          filePath: filePath,
+          key: key,
+          url: url,
+          success: false,
+          error: e.toString(),
+        ),
+      );
 
       if (verbose) {
         stderr.writeln('  ✗ $e');
@@ -156,8 +132,18 @@ Future<List<UploadResult>> uploadFiles({
 bool isImageFile(String filePath) {
   final ext = p.extension(filePath).toLowerCase().replaceFirst('.', '');
   const imageExts = {
-    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg',
-    'tif', 'tiff', 'heic', 'heif', 'ico',
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'bmp',
+    'webp',
+    'svg',
+    'tif',
+    'tiff',
+    'heic',
+    'heif',
+    'ico',
   };
   return imageExts.contains(ext);
 }

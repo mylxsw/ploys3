@@ -34,6 +34,7 @@ You can save multiple server profiles and switch between them at any time. A bui
 PloyS3 can act as a dedicated image-hosting tool:
 
 - Configure a dedicated S3 server and upload directory specifically for image hosting.
+- Configure a path template with variables such as `{year}`, `{month}`, `{day}`, `{timestamp}`, `{fileName}`, and `{ext}`.
 - Choose a **naming strategy**: keep the original filename or generate a random name to avoid collisions.
 - After every upload PloyS3 automatically copies the **Markdown image syntax** (`![](url)`) to your clipboard so you can paste it straight into any Markdown document.
 
@@ -148,7 +149,7 @@ Some platforms require additional entitlements or Info.plist entries before the 
 Navigate to **Settings → Image Hosting** to:
 
 - Select which server profile to use for image uploads.
-- Set the upload path prefix (e.g. `images/`).
+- Set the upload path template (e.g. `images/{year}/{month}/` or `images/{year}/{fileName}.{ext}`).
 - Choose the filename strategy (original or random).
 
 ---
@@ -167,5 +168,4 @@ Navigate to **Settings → Image Hosting** to:
 | `flutter_local_notifications` | System notifications for transfer events |
 | `shared_preferences` | Persistent settings storage |
 | `intl` | Internationalisation |
-
 

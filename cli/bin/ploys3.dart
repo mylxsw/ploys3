@@ -23,7 +23,7 @@ void main(List<String> arguments) async {
       ..addOption(
         'prefix',
         abbr: 'p',
-        help: 'Upload directory/prefix (default: from image bed config)',
+        help: 'Upload path template (default: from image bed config)',
       )
       ..addOption(
         'naming',
@@ -115,9 +115,7 @@ void _printUsage(ArgParser parser) {
   stderr.writeln(
     '  ploys3 upload -s myserver file.zip     Upload to specific server',
   );
-  stderr.writeln(
-    '  ploys3 upload -p blog/img/ photo.jpg   Upload to specific directory',
-  );
+  stderr.writeln('  ploys3 upload -p blog/{year}/{month}/ photo.jpg');
 }
 
 Future<void> _handleUpload(ArgResults args) async {
@@ -126,7 +124,7 @@ Future<void> _handleUpload(ArgResults args) async {
     stderr.writeln('');
     stderr.writeln('Options:');
     stderr.writeln('  -s, --server    Server name or ID');
-    stderr.writeln('  -p, --prefix    Upload directory/prefix');
+    stderr.writeln('  -p, --prefix    Upload path template');
     stderr.writeln('  -n, --naming    Naming rule: original|random');
     stderr.writeln('  -m, --markdown  Output as Markdown image links');
     stderr.writeln('  -v, --verbose   Verbose output');
@@ -201,8 +199,8 @@ Future<void> _handleUpload(ArgResults args) async {
     exit(1);
   }
 
-  // Determine prefix and naming rule
-  final prefix =
+  // Determine path template and naming rule
+  final pathTemplate =
       args['prefix'] as String? ??
       (serverQuery == null ? (config.imageBed?.uploadDir ?? '') : '');
   final namingRule =
@@ -216,7 +214,9 @@ Future<void> _handleUpload(ArgResults args) async {
   if (verbose) {
     stderr.writeln('Server: ${server.name}');
     stderr.writeln('Bucket: ${server.bucket}');
-    stderr.writeln('Prefix: ${prefix.isEmpty ? '(root)' : prefix}');
+    stderr.writeln(
+      'Path:   ${pathTemplate.isEmpty ? '(root + filename)' : pathTemplate}',
+    );
     stderr.writeln('Naming: $namingRule');
     stderr.writeln('Files:  ${resolvedPaths.length}');
     stderr.writeln('');
@@ -226,7 +226,7 @@ Future<void> _handleUpload(ArgResults args) async {
   final results = await uploadFiles(
     server: server,
     filePaths: resolvedPaths,
-    prefix: prefix,
+    pathTemplate: pathTemplate,
     namingRule: namingRule,
     verbose: verbose,
   );
@@ -343,7 +343,7 @@ void _handleConfig(ArgResults args) {
         '  Server:  ${server?.name ?? 'Not found (${config.imageBed!.serverId})'}',
       );
       print(
-        '  Dir:     ${config.imageBed!.uploadDir.isEmpty ? '(root)' : config.imageBed!.uploadDir}',
+        '  Path:    ${config.imageBed!.uploadDir.isEmpty ? '(root + filename)' : config.imageBed!.uploadDir}',
       );
       print('  Naming:  ${config.imageBed!.namingRule}');
     }

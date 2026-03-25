@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart' as path;
+import 'package:ploys3/core/image_bed_path_template.dart';
 import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/menubar_controller.dart';
 import 'package:ploys3/core/platform.dart';
@@ -105,6 +106,35 @@ class UploadManager extends ChangeNotifier {
         originalFileName: originalName,
         targetBucket: _service.bucketName,
         targetKey: key,
+        cdnUrl: _cdnUrl,
+      );
+      _queue.add(item);
+      addedItems.add(item);
+    }
+    notifyListeners();
+    if (addedItems.isNotEmpty) {
+      _markActive();
+    }
+    _processQueue();
+    return addedItems;
+  }
+
+  List<UploadItem> addToQueueWithTargetResolver(
+    List<String> filePaths,
+    ImageBedResolvedTarget Function(String path) targetResolver,
+  ) {
+    final addedItems = <UploadItem>[];
+    for (final filePath in filePaths) {
+      final originalName = path.basename(filePath);
+      final target = targetResolver(filePath);
+      if (target.key.isEmpty || target.fileName.isEmpty) continue;
+
+      final item = UploadItem(
+        filePath: filePath,
+        fileName: target.fileName,
+        originalFileName: originalName,
+        targetBucket: _service.bucketName,
+        targetKey: target.key,
         cdnUrl: _cdnUrl,
       );
       _queue.add(item);

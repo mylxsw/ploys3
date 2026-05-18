@@ -5,6 +5,7 @@ import 'package:minio/minio.dart';
 import 'package:path/path.dart' as p;
 
 import 'config.dart';
+import 'content_type.dart';
 import 'path_template.dart';
 
 /// Creates a Minio client from server config
@@ -99,7 +100,15 @@ Future<List<UploadResult>> uploadFiles({
     try {
       final stream = file.openRead().cast<Uint8List>();
       final size = await file.length();
-      await client.putObject(server.bucket, key, stream, size: size);
+      final contentType =
+          contentTypeForFileName(key) ?? contentTypeForFileName(filePath);
+      await client.putObject(
+        server.bucket,
+        key,
+        stream,
+        size: size,
+        metadata: contentType == null ? null : {'content-type': contentType},
+      );
 
       results.add(
         UploadResult(filePath: filePath, key: key, url: url, success: true),

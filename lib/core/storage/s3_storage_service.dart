@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:minio/minio.dart';
+import 'package:ploys3/core/content_type.dart';
 import 'package:ploys3/core/storage/storage_service.dart';
 import 'package:ploys3/models/s3_server_config.dart';
 import 'package:ploys3/r2_connection_helper.dart';
@@ -96,7 +97,11 @@ class S3StorageService implements StorageService {
 
     // Use recursive: true to list ALL objects under this prefix
     // (including nested subdirectories)
-    final stream = _minio.listObjects(bucketName, prefix: normalizedFolderKey, recursive: true);
+    final stream = _minio.listObjects(
+      bucketName,
+      prefix: normalizedFolderKey,
+      recursive: true,
+    );
     final results = await stream.toList();
 
     final keysToDelete = <String>[];
@@ -134,7 +139,16 @@ class S3StorageService implements StorageService {
     int? size,
     String? contentType,
   }) async {
-    await _minio.putObject(bucketName, key, stream, size: size);
+    final resolvedContentType = contentType ?? contentTypeForFileName(key);
+    await _minio.putObject(
+      bucketName,
+      key,
+      stream,
+      size: size,
+      metadata: resolvedContentType == null
+          ? null
+          : {'content-type': resolvedContentType},
+    );
   }
 
   @override

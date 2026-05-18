@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart' as path;
+import 'package:ploys3/core/content_type.dart';
 import 'package:ploys3/core/image_bed_path_template.dart';
 import 'package:ploys3/core/language_manager.dart';
 import 'package:ploys3/core/menubar_controller.dart';
@@ -208,7 +209,14 @@ class UploadManager extends ChangeNotifier {
           // For now, let's assume atomic upload for simplicity or mock progress.
           // If we want real progress, we need to wrap the stream.
 
-          await _service.uploadStream(item.targetKey, stream, size: size);
+          await _service.uploadStream(
+            item.targetKey,
+            stream,
+            size: size,
+            contentType:
+                contentTypeForFileName(item.targetKey) ??
+                contentTypeForFileName(item.originalFileName),
+          );
 
           item.status = UploadStatus.success;
           item.progress = 1.0;
